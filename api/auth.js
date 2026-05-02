@@ -1,3 +1,4 @@
+// api/auth.js
 const path = require('path');
 const fs   = require('fs');
 
@@ -7,8 +8,10 @@ const MIME = {
   '.json': 'application/json; charset=utf-8',
 };
 
-const ALLOWED = {
-  '/':           'index.html',
+// Vercel の関数は /api/auth で実行されるため、
+// 実際のファイル名とリクエストパスのマッピングを定義
+const ALLOWED_FILES = {
+  '/':           'index.html', // ルートパスは index.html を返す
   '/index.html': 'index.html',
   '/app.js':     'app.js',
   '/data.json':  'data.json',
@@ -27,7 +30,6 @@ export default function handler(req, res) {
     return;
   }
 
-  // パスワードにコロンが含まれても壊れないよう最初の : だけで分割
   const decoded  = Buffer.from(authHeader.split(' ')[1], 'base64').toString();
   const colonIdx = decoded.indexOf(':');
   const user     = decoded.slice(0, colonIdx);
@@ -40,17 +42,17 @@ export default function handler(req, res) {
   }
 
   // ── 認証成功：ファイルを返す ─────────────────────────
+  // req.url は /app.js や /data.json のようになる
   const reqPath  = req.url.split('?')[0];
-  const fileName = ALLOWED[reqPath];
+  const fileName = ALLOWED_FILES[reqPath];
 
   if (!fileName) {
     res.status(404).send('Not Found');
     return;
   }
 
-  // Vercel サーバーレス関数の __dirname は /var/task/api
-  // プロジェクトルートは1つ上の /var/task
-  const filePath = path.join(__dirname, '..', fileName);
+  // ファイルは api/auth.js と同じディレクトリにあると想定
+  const filePath = path.join(__dirname, fileName); // __dirname は /var/task/api
   const ext      = path.extname(fileName);
   const mimeType = MIME[ext] || 'text/plain';
 
@@ -60,7 +62,12 @@ export default function handler(req, res) {
     const fileData = fs.readFileSync(filePath, 'utf8');
     res.setHeader('Content-Type', mimeType);
     if (fileName === 'data.json') {
-      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Cache-Control', 'no-store'); // data.json はキャッシュしない
+    } else {
+      // その他の静的ファイルもキャッシュさせない方がデバッグしやすい
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
     }
     res.status(200).send(fileData);
   } catch (err) {
