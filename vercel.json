@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "api/auth.js": {
-      "runtime": "vercel-node@4.x"
-    }
-  },
   "routes": [
     {
       "src": "/(.*)",
