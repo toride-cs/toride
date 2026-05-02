@@ -184,6 +184,8 @@ function renderContent() {
                 <button onclick="exportBlock(${bi})">📤 JSONエクスポート</button>
                 <button onclick="duplicateBlock(${bi})">📋 複製</button>
                 <button onclick="moveBlockToTab(${bi})">↗ 別タブへ移動</button>
+                <button class="edit-only-mi" onclick="moveBlock(${bi},-1)">⬆ 上へ移動</button>
+                <button class="edit-only-mi" onclick="moveBlock(${bi}, 1)">⬇ 下へ移動</button>
                 <button class="edit-only-mi" onclick="editBlockTags(${bi})">🏷 タグ編集</button>
                 <button class="edit-only-mi" onclick="addColumn(${bi})">＋ 列追加</button>
                 <button class="edit-only-mi danger-mi" onclick="delBlock(${bi})">🗑 削除</button>
@@ -537,34 +539,6 @@ function handleImportJSON(raw) {
 /* ═══════════════════════════════════════════════════
    EXPORT — JSON & HTML
 ════════════════════════════════════════════════════ */
-
-/* ═══════════════════════════════════════════════════
-   SAVE TO GITHUB
-════════════════════════════════════════════════════ */
-async function saveToGitHub() {
-  const btn = document.getElementById("saveBtn");
-  if (btn) { btn.disabled = true; btn.textContent = "⏳ 保存中..."; }
-  try {
-    const json = JSON.stringify(data, null, 2);
-    const res  = await fetch("/save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: json,
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(err.error || res.statusText);
-    }
-    const result = await res.json();
-    toast("✅ GitHubに保存しました (commit: " + (result.commit?.slice(0,7) ?? "ok") + ")");
-  } catch (e) {
-    toast("❌ 保存失敗: " + e.message);
-    console.error(e);
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = "💾 保存"; }
-  }
-}
-
 function exportJSON() {
   const json = JSON.stringify(data, null, 2);
   const blob = new Blob([json], { type: "application/json" });
@@ -721,6 +695,14 @@ function moveRow(bi, ri, dir) {
   const ni   = ri + dir;
   if (ni < 0 || ni >= rows.length) return;
   [rows[ri], rows[ni]] = [rows[ni], rows[ri]];
+  renderContent();
+}
+
+function moveBlock(bi, dir) {
+  const blocks = curTab().blocks;
+  const ni     = bi + dir;
+  if (ni < 0 || ni >= blocks.length) return;
+  [blocks[bi], blocks[ni]] = [blocks[ni], blocks[bi]];
   renderContent();
 }
 
