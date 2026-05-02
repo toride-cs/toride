@@ -8,10 +8,8 @@ const MIME = {
   '.json': 'application/json; charset=utf-8',
 };
 
-// Vercel の関数は /api/auth で実行されるため、
-// 実際のファイル名とリクエストパスのマッピングを定義
 const ALLOWED_FILES = {
-  '/':           'index.html', // ルートパスは index.html を返す
+  '/':           'index.html',
   '/index.html': 'index.html',
   '/app.js':     'app.js',
   '/data.json':  'data.json',
@@ -21,7 +19,6 @@ export default function handler(req, res) {
   const AUTH_USER = process.env.BASIC_AUTH_USER || 'admin';
   const AUTH_PASS = process.env.BASIC_AUTH_PASS || 'password123';
 
-  // ── Basic 認証チェック ────────────────────────────────
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Basic ')) {
@@ -41,18 +38,18 @@ export default function handler(req, res) {
     return;
   }
 
-  // ── 認証成功：ファイルを返す ─────────────────────────
-  // req.url は /app.js や /data.json のようになる
-  const reqPath  = req.url.split('?')[0];
-  const fileName = ALLOWED_FILES[reqPath];
+  // Vercel リライト後でも元のパスを取得する
+  const rawPath  = req.headers['x-matched-path'] || req.headers['x-invoke-path'] || req.url;
+  const reqPath  = rawPath.split('?')[0].replace(/^\/api\/auth/, '') || '/';
+  const fileName = ALLOWED_FILES[reqPath] || ALLOWED_FILES['/'];
 
   if (!fileName) {
     res.status(404).send('Not Found');
     return;
   }
 
-  // ファイルは api/auth.js と同じディレクトリにあると想定
-  const filePath = path.join(__dirname, fileName); // __dirname は /var/task/api
+  // ★ ここを修正: __dirname は /var/task/api なので .. で一つ上へ
+  const filePath = path.join(__dirname, '..', fileName);
   const ext      = path.extname(fileName);
   const mimeType = MIME[ext] || 'text/plain';
 
@@ -62,9 +59,8 @@ export default function handler(req, res) {
     const fileData = fs.readFileSync(filePath, 'utf8');
     res.setHeader('Content-Type', mimeType);
     if (fileName === 'data.json') {
-      res.setHeader('Cache-Control', 'no-store'); // data.json はキャッシュしない
+      res.setHeader('Cache-Control', 'no-store');
     } else {
-      // その他の静的ファイルもキャッシュさせない方がデバッグしやすい
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
