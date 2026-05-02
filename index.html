@@ -86,6 +86,9 @@ body {
 .hbtn-export { background: rgba(255,209,102,.08); color: var(--yellow); border-color: rgba(255,209,102,.25); }
 .hbtn-export:hover { background: rgba(255,209,102,.18); border-color: var(--yellow); }
 .hbtn-json   { background: rgba(0,212,255,.08);  color: var(--accent); border-color: rgba(0,212,255,.25); }
+.hbtn-save   { background: rgba(45,255,170,.08); color: var(--green);  border-color: rgba(45,255,170,.25); }
+.hbtn-save:hover { background: rgba(45,255,170,.18); border-color: var(--green); box-shadow: 0 0 8px rgba(45,255,170,.2); }
+.hbtn-save:disabled { opacity: .5; cursor: not-allowed; }
 .hbtn-json:hover { background: rgba(0,212,255,.18); border-color: var(--accent); }
 
 /* Edit mode banner */
@@ -427,6 +430,7 @@ mark { background: rgba(255,209,102,.3); color: inherit; border-radius: 2px; }
       <div class="hdr-btns">
         <button class="hbtn hbtn-edit"   id="editBtn"  onclick="toggleEdit()">✏️ <em>編集</em></button>
         <button class="hbtn hbtn-json"   onclick="exportJSON()">🗄 <em>JSON</em></button>
+        <button class="hbtn hbtn-save"   id="saveBtn" onclick="saveToGitHub()">💾 <em>保存</em></button>
         <button class="hbtn hbtn-export" onclick="exportHTML()">📥 <em>書き出し</em></button>
       </div>
     </div>

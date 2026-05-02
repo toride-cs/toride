@@ -537,6 +537,34 @@ function handleImportJSON(raw) {
 /* ═══════════════════════════════════════════════════
    EXPORT — JSON & HTML
 ════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════
+   SAVE TO GITHUB
+════════════════════════════════════════════════════ */
+async function saveToGitHub() {
+  const btn = document.getElementById("saveBtn");
+  if (btn) { btn.disabled = true; btn.textContent = "⏳ 保存中..."; }
+  try {
+    const json = JSON.stringify(data, null, 2);
+    const res  = await fetch("/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: json,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || res.statusText);
+    }
+    const result = await res.json();
+    toast("✅ GitHubに保存しました (commit: " + (result.commit?.slice(0,7) ?? "ok") + ")");
+  } catch (e) {
+    toast("❌ 保存失敗: " + e.message);
+    console.error(e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "💾 保存"; }
+  }
+}
+
 function exportJSON() {
   const json = JSON.stringify(data, null, 2);
   const blob = new Blob([json], { type: "application/json" });
