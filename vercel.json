@@ -1,8 +1,17 @@
 {
-  "routes": [
+  "functions": {
+    "api/auth.js": {
+      "includeFiles": [
+        "index.html",
+        "app.js",
+        "data.json"
+      ]
+    }
+  },
+  "rewrites": [
     {
-      "src": "/(.*)",
-      "dest": "/api/auth"
+      "source": "/(.*)",
+      "destination": "/api/auth"
     }
   ]
 }
