@@ -1,7 +1,11 @@
 {
   "functions": {
     "api/auth.js": {
-      "includeFiles": "api/**" // apiディレクトリ以下の全てのファイルをバンドル
+      "includeFiles": [
+        "index.html",
+        "app.js",
+        "data.json"
+      ]
     }
   },
   "rewrites": [
