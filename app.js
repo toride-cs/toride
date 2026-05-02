@@ -184,10 +184,9 @@ function renderContent() {
                 <button onclick="exportBlock(${bi})">📤 JSONエクスポート</button>
                 <button onclick="duplicateBlock(${bi})">📋 複製</button>
                 <button onclick="moveBlockToTab(${bi})">↗ 別タブへ移動</button>
-                <button class="edit-only-mi" onclick="moveBlock(${bi},-1)">⬆ 上へ移動</button>
-                <button class="edit-only-mi" onclick="moveBlock(${bi}, 1)">⬇ 下へ移動</button>
                 <button class="edit-only-mi" onclick="editBlockTags(${bi})">🏷 タグ編集</button>
                 <button class="edit-only-mi" onclick="addColumn(${bi})">＋ 列追加</button>
+                <button class="edit-only-mi" onclick="delColumn(${bi})">－ 列削除</button>
                 <button class="edit-only-mi danger-mi" onclick="delBlock(${bi})">🗑 削除</button>
               </div>
             </div>
@@ -669,6 +668,23 @@ function addColumn(bi) {
     });
 }
 
+function delColumn(bi) {
+  const blk = curTab().blocks[bi];
+  if (blk.headers.length <= 1) { toast("❌ 列が1つしかないため削除できません"); return; }
+  const opts = blk.headers.map((h, i) =>
+    `<option value="${i}">${esc(h)}</option>`
+  ).join("");
+  openModal("列を削除",
+    `<label>削除する列を選択</label><select id="mVal">${opts}</select>
+     <p style="color:var(--red);font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:4px">⚠ その列のデータもすべて削除されます</p>`,
+    () => {
+      const ci = parseInt(val("mVal"));
+      blk.headers.splice(ci, 1);
+      blk.rows.forEach(r => r.splice(ci, 1));
+      renderContent();
+    });
+}
+
 /* ═══════════════════════════════════════════════════
    ROW CRUD
 ════════════════════════════════════════════════════ */
@@ -695,14 +711,6 @@ function moveRow(bi, ri, dir) {
   const ni   = ri + dir;
   if (ni < 0 || ni >= rows.length) return;
   [rows[ri], rows[ni]] = [rows[ni], rows[ri]];
-  renderContent();
-}
-
-function moveBlock(bi, dir) {
-  const blocks = curTab().blocks;
-  const ni     = bi + dir;
-  if (ni < 0 || ni >= blocks.length) return;
-  [blocks[bi], blocks[ni]] = [blocks[ni], blocks[bi]];
   renderContent();
 }
 
