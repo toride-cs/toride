@@ -1,14 +1,12 @@
 const path = require('path');
 const fs   = require('fs');
 
-// ── MIME TYPE MAP ─────────────────────────────────────
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js':   'application/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
 };
 
-// ── 許可するファイルの明示的なホワイトリスト ──────────────
 const ALLOWED = {
   '/':           'index.html',
   '/index.html': 'index.html',
@@ -29,9 +27,11 @@ export default function handler(req, res) {
     return;
   }
 
-  const [user, pass] = Buffer.from(authHeader.split(' ')[1], 'base64')
-    .toString()
-    .split(':');
+  // パスワードにコロンが含まれても壊れないよう最初の : だけで分割
+  const decoded  = Buffer.from(authHeader.split(' ')[1], 'base64').toString();
+  const colonIdx = decoded.indexOf(':');
+  const user     = decoded.slice(0, colonIdx);
+  const pass     = decoded.slice(colonIdx + 1);
 
   if (user !== AUTH_USER || pass !== AUTH_PASS) {
     res.setHeader('WWW-Authenticate', 'Basic realm="Secure Area"');
@@ -39,8 +39,8 @@ export default function handler(req, res) {
     return;
   }
 
-  // ── 認証成功：リクエストパスに応じてファイルを返す ─────
-  const reqPath  = req.url.split('?')[0]; // クエリ除去
+  // ── 認証成功：ファイルを返す ─────────────────────────
+  const reqPath  = req.url.split('?')[0];
   const fileName = ALLOWED[reqPath];
 
   if (!fileName) {
@@ -48,20 +48,23 @@ export default function handler(req, res) {
     return;
   }
 
-  const filePath = path.join(process.cwd(), fileName);
+  // Vercel サーバーレス関数の __dirname は /var/task/api
+  // プロジェクトルートは1つ上の /var/task
+  const filePath = path.join(__dirname, '..', fileName);
   const ext      = path.extname(fileName);
   const mimeType = MIME[ext] || 'text/plain';
 
-  fs.readFile(filePath, 'utf8', (err, data) => {
-    if (err) {
-      res.status(500).send('Error loading file');
-      return;
-    }
+  console.log('[auth] serving:', filePath);
+
+  try {
+    const fileData = fs.readFileSync(filePath, 'utf8');
     res.setHeader('Content-Type', mimeType);
-    // data.json はキャッシュさせない（編集後すぐ反映させるため）
     if (fileName === 'data.json') {
       res.setHeader('Cache-Control', 'no-store');
     }
-    res.status(200).send(data);
-  });
+    res.status(200).send(fileData);
+  } catch (err) {
+    console.error('[auth] error:', err.message, 'path:', filePath);
+    res.status(500).send('Error: ' + err.message);
+  }
 }
