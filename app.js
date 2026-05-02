@@ -184,6 +184,8 @@ function renderContent() {
                 <button onclick="exportBlock(${bi})">📤 JSONエクスポート</button>
                 <button onclick="duplicateBlock(${bi})">📋 複製</button>
                 <button onclick="moveBlockToTab(${bi})">↗ 別タブへ移動</button>
+                <button class="edit-only-mi" onclick="moveBlock(${bi},-1)">⬆ 上へ移動</button>
+                <button class="edit-only-mi" onclick="moveBlock(${bi}, 1)">⬇ 下へ移動</button>
                 <button class="edit-only-mi" onclick="editBlockTags(${bi})">🏷 タグ編集</button>
                 <button class="edit-only-mi" onclick="addColumn(${bi})">＋ 列追加</button>
                 <button class="edit-only-mi" onclick="delColumn(${bi})">－ 列削除</button>
@@ -683,6 +685,14 @@ function delColumn(bi) {
       blk.rows.forEach(r => r.splice(ci, 1));
       renderContent();
     });
+}
+
+function moveBlock(bi, dir) {
+  const blocks = curTab().blocks;
+  const ni     = bi + dir;
+  if (ni < 0 || ni >= blocks.length) return;
+  [blocks[bi], blocks[ni]] = [blocks[ni], blocks[bi]];
+  renderContent();
 }
 
 /* ═══════════════════════════════════════════════════
