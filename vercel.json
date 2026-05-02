@@ -1,10 +1,10 @@
 {
   "functions": {
-    "api/auth.js": {
+    "api/auth.js": {  
       "includeFiles": [
-        "index.html",
-        "app.js",
-        "data.json"
+        "api/index.html", 
+        "api/app.js",     
+        "api/data.json"   
       ]
     }
   },
