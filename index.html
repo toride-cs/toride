@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TORIDDE</title>
+<title>TORIDE // Cheat Sheet</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+JP:wght@400;500&display=swap" rel="stylesheet">
 <style>
-/* ═══════════════════ RESET & TOKENS ═══════════════════ */
+/* ═══ RESET & TOKENS ═══════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -23,7 +23,6 @@
   --green:   #2dffaa;
   --yellow:  #ffd166;
   --red:     #ff4d6d;
-  --orange:  #ff8c42;
   --glow:    0 0 14px rgba(0,212,255,.35);
 }
 
@@ -36,10 +35,10 @@ body {
   min-height: 100vh;
 }
 
-/* ═══════════════════ LAYOUT ═══════════════════ */
+/* ═══ LAYOUT ════════════════════════════════════════ */
 #app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-/* ═══════════════════ HEADER ═══════════════════ */
+/* ═══ HEADER ════════════════════════════════════════ */
 #header {
   flex-shrink: 0;
   background: linear-gradient(180deg, #0d1422 0%, #0b0f18 100%);
@@ -47,67 +46,47 @@ body {
   padding: 12px 20px 0;
   z-index: 100;
 }
-
 .header-top {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 10px; flex-wrap: wrap;
 }
-
 .logo {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: 3px;
-  text-shadow: var(--glow);
-  white-space: nowrap;
+  font-size: 15px; font-weight: 700;
+  color: var(--accent); letter-spacing: 3px;
+  text-shadow: var(--glow); white-space: nowrap;
 }
 .logo em { color: var(--text3); font-style: normal; font-weight: 400; font-size: 11px; letter-spacing: 1px; }
 
 /* Search */
-.search-wrap { position: relative; flex: 1; min-width: 160px; max-width: 360px; }
+.search-wrap { position: relative; flex: 1; min-width: 160px; max-width: 400px; }
 .search-wrap svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--text3); pointer-events: none; }
 #searchInput {
   width: 100%;
-  background: var(--bg3);
-  border: 1px solid var(--border2);
-  color: var(--text);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  padding: 7px 10px 7px 30px;
-  border-radius: 5px;
-  outline: none;
+  background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text); font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; padding: 7px 10px 7px 30px;
+  border-radius: 5px; outline: none;
   transition: border-color .2s, box-shadow .2s;
 }
 #searchInput:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,212,255,.12); }
 #searchInput::placeholder { color: var(--text3); }
 
-/* Header action buttons */
+/* Header buttons */
 .hdr-btns { display: flex; gap: 6px; margin-left: auto; align-items: center; }
-
 .hbtn {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 5px;
-  border: 1px solid;
-  cursor: pointer;
-  display: flex; align-items: center; gap: 5px;
-  transition: all .15s;
-  white-space: nowrap;
+  font-size: 11px; font-weight: 600;
+  padding: 6px 12px; border-radius: 5px; border: 1px solid;
+  cursor: pointer; display: flex; align-items: center; gap: 5px;
+  transition: all .15s; white-space: nowrap;
 }
 .hbtn-edit   { background: rgba(45,255,170,.08); color: var(--green);  border-color: rgba(45,255,170,.25); }
 .hbtn-edit:hover, .hbtn-edit.on { background: rgba(45,255,170,.18); border-color: var(--green); box-shadow: 0 0 8px rgba(45,255,170,.2); }
-.hbtn-save   { background: rgba(0,212,255,.08);  color: var(--accent); border-color: rgba(0,212,255,.25); }
-.hbtn-save:hover { background: rgba(0,212,255,.18); border-color: var(--accent); }
-.hbtn-export { background: rgba(255,209,102,.08);color: var(--yellow); border-color: rgba(255,209,102,.25); }
+.hbtn-export { background: rgba(255,209,102,.08); color: var(--yellow); border-color: rgba(255,209,102,.25); }
 .hbtn-export:hover { background: rgba(255,209,102,.18); border-color: var(--yellow); }
-.hbtn-reset  { background: rgba(255,77,109,.08); color: var(--red);    border-color: rgba(255,77,109,.25); }
-.hbtn-reset:hover  { background: rgba(255,77,109,.18); border-color: var(--red); }
+.hbtn-json   { background: rgba(0,212,255,.08);  color: var(--accent); border-color: rgba(0,212,255,.25); }
+.hbtn-json:hover { background: rgba(0,212,255,.18); border-color: var(--accent); }
 
 /* Edit mode banner */
 #editBanner {
@@ -116,144 +95,148 @@ body {
   border-top: 1px solid rgba(45,255,170,.15);
   color: var(--green);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  text-align: center;
-  padding: 3px;
-  letter-spacing: .5px;
+  font-size: 10px; text-align: center; padding: 3px; letter-spacing: .5px;
 }
 
-/* ═══════════════════ TABS BAR ═══════════════════ */
+/* ═══ TABS BAR ══════════════════════════════════════ */
 #tabsBar {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding-bottom: 0;
+  display: flex; align-items: center; gap: 2px;
+  overflow-x: auto; scrollbar-width: none; padding-bottom: 0;
 }
 #tabsBar::-webkit-scrollbar { display: none; }
 
 .tab-btn {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 7px 14px;
-  border: none;
-  border-radius: 5px 5px 0 0;
-  background: transparent;
-  color: var(--text3);
-  cursor: pointer;
-  white-space: nowrap;
-  position: relative;
+  font-size: 11px; font-weight: 600;
+  padding: 7px 14px; border: none; border-radius: 5px 5px 0 0;
+  background: transparent; color: var(--text3); cursor: pointer;
+  white-space: nowrap; position: relative;
   transition: color .15s, background .15s;
   display: flex; align-items: center; gap: 6px;
+  user-select: none;
 }
 .tab-btn:hover { color: var(--text2); background: rgba(255,255,255,.04); }
 .tab-btn.active { color: var(--accent); background: var(--bg2); border-top: 2px solid var(--accent); }
+.tab-btn.dragging { opacity: .4; }
+.tab-btn.drag-over { background: rgba(0,212,255,.1); border-top: 2px solid var(--accent); }
 
 .tab-close {
-  display: none;
-  width: 14px; height: 14px;
-  background: rgba(255,77,109,.2);
-  color: var(--red);
+  display: none; width: 14px; height: 14px;
+  background: rgba(255,77,109,.2); color: var(--red);
   border: none; border-radius: 50%;
   font-size: 9px; line-height: 14px; text-align: center;
-  cursor: pointer;
-  transition: background .15s;
+  cursor: pointer; transition: background .15s;
 }
 .tab-close:hover { background: rgba(255,77,109,.5); }
 
 .tab-add {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  padding: 6px 12px;
-  border: 1px dashed var(--border2);
-  border-radius: 5px 5px 0 0;
-  background: transparent;
-  color: var(--text3);
-  cursor: pointer;
-  display: none;
-  transition: all .15s;
-  white-space: nowrap;
+  font-family: 'JetBrains Mono', monospace; font-size: 14px;
+  padding: 6px 12px; border: 1px dashed var(--border2);
+  border-radius: 5px 5px 0 0; background: transparent;
+  color: var(--text3); cursor: pointer; display: none; transition: all .15s;
 }
 .tab-add:hover { color: var(--green); border-color: var(--green); }
 
-/* Edit mode reveals */
-body.edit .tab-close { display: inline-block; }
-body.edit .tab-add   { display: inline-block; }
+/* Edit mode */
+body.edit .tab-close  { display: inline-block; }
+body.edit .tab-add    { display: inline-block; }
 body.edit #editBanner { display: block; }
 body.edit .edit-only  { display: flex !important; }
-body:not(.edit) .edit-only { display: none !important; }
-body.edit .editable:hover {
-  outline: 1px dashed rgba(45,255,170,.4);
-  cursor: text;
-}
+body:not(.edit) .edit-only  { display: none !important; }
+body.edit .editable:hover { outline: 1px dashed rgba(45,255,170,.4); cursor: text; }
 
-/* ═══════════════════ MAIN CONTENT ═══════════════════ */
-#content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-}
+/* ═══ CONTENT ═══════════════════════════════════════ */
+#content { flex: 1; overflow-y: auto; padding: 20px; }
+#content::-webkit-scrollbar { width: 5px; }
+#content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
 
-/* Section title row */
+/* Section head */
 .sec-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 12px; margin-bottom: 12px;
 }
 .sec-title-wrap { flex: 1; }
 .sec-title {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--accent);
-  text-shadow: var(--glow);
-  letter-spacing: 1px;
+  font-family: 'JetBrains Mono', monospace; font-size: 18px;
+  font-weight: 700; color: var(--accent); text-shadow: var(--glow); letter-spacing: 1px;
 }
-.sec-sub { font-size: 12px; color: var(--text3); margin-top: 3px; }
-
+.sec-sub  { font-size: 12px; color: var(--text3); margin-top: 3px; }
 .sec-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
-/* ═══════════════════ BLOCKS ═══════════════════ */
+/* ═══ TAG BAR ═══════════════════════════════════════ */
+.tag-bar { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+.tag-pill {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  padding: 3px 9px; border-radius: 12px; cursor: pointer;
+  background: rgba(0,212,255,.08); color: var(--accent);
+  border: 1px solid rgba(0,212,255,.2); transition: all .12s;
+}
+.tag-pill:hover, .tag-pill.active {
+  background: rgba(0,212,255,.2); border-color: var(--accent);
+}
+.tag-clear {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  padding: 3px 9px; border-radius: 12px; cursor: pointer;
+  background: rgba(255,77,109,.08); color: var(--red);
+  border: 1px solid rgba(255,77,109,.2); transition: all .12s;
+}
+.blk-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.blk-tag {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  padding: 2px 7px; border-radius: 10px; cursor: pointer;
+  background: rgba(45,255,170,.07); color: var(--green);
+  border: 1px solid rgba(45,255,170,.15); transition: all .12s;
+}
+.blk-tag:hover { background: rgba(45,255,170,.18); }
+
+/* ═══ BLOCKS ════════════════════════════════════════ */
 .block { margin-top: 22px; }
-
-.block-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
+.block-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
 .block-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text2);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  padding-left: 9px;
-  border-left: 2px solid var(--accent2);
-  flex: 1;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+  color: var(--text2); letter-spacing: 2px; text-transform: uppercase;
+  padding-left: 9px; border-left: 2px solid var(--accent2); flex: 1;
 }
-.block-actions { display: flex; gap: 4px; }
+.block-actions { display: flex; gap: 4px; align-items: center; margin-left: auto; }
 
-/* ═══════════════════ TABLE ═══════════════════ */
+/* Block menu */
+.blk-menu-wrap { position: relative; }
+.blk-menu-btn {
+  font-family: 'JetBrains Mono', monospace; font-size: 14px;
+  padding: 2px 8px; border: 1px solid var(--border2);
+  background: transparent; color: var(--text2); border-radius: 4px; cursor: pointer;
+  transition: all .12s; line-height: 1;
+}
+.blk-menu-btn:hover { background: var(--bg3); color: var(--accent); }
+.blk-menu {
+  display: none; position: absolute; right: 0; top: calc(100% + 4px);
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 7px; min-width: 170px; z-index: 200;
+  box-shadow: 0 8px 24px rgba(0,0,0,.6); overflow: hidden;
+}
+.blk-menu.open { display: block; }
+.blk-menu button {
+  display: block; width: 100%; text-align: left;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  padding: 8px 14px; background: transparent; color: var(--text2);
+  border: none; cursor: pointer; transition: background .1s;
+  border-bottom: 1px solid var(--border);
+}
+.blk-menu button:last-child { border-bottom: none; }
+.blk-menu button:hover { background: var(--bg3); color: var(--text); }
+.blk-menu .edit-only-mi { display: none; }
+body.edit .blk-menu .edit-only-mi { display: block; }
+.blk-menu .danger-mi { color: var(--red) !important; }
+
+/* ═══ TABLE ═════════════════════════════════════════ */
 .tbl-wrap { overflow-x: auto; border-radius: 6px; border: 1px solid var(--border); }
-
 table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 thead tr { background: var(--bg3); }
 thead th {
-  padding: 9px 12px;
-  text-align: left;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: 1px;
-  border-bottom: 1px solid var(--border2);
-  white-space: nowrap;
+  padding: 9px 12px; text-align: left;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+  color: var(--accent); letter-spacing: 1px;
+  border-bottom: 1px solid var(--border2); white-space: nowrap;
 }
 tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
 tbody tr:last-child { border-bottom: none; }
@@ -261,29 +244,47 @@ tbody tr:hover { background: rgba(0,212,255,.03); }
 tbody tr.hidden { display: none; }
 
 td {
-  padding: 8px 12px;
-  vertical-align: top;
-  color: var(--text);
-  line-height: 1.55;
+  padding: 8px 12px; vertical-align: top;
+  color: var(--text); line-height: 1.55; position: relative;
 }
-td:first-child {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 600;
-  color: var(--accent);
-  white-space: nowrap;
-}
+td:first-child { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--accent); }
 
-/* Row action column */
+/* Markdown cell */
+.md-cell { min-width: 80px; }
+.md-content { padding-right: 22px; }
+.md-code {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 4px; padding: 6px 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: var(--green); overflow-x: auto; margin: 4px 0;
+  white-space: pre; line-height: 1.5;
+}
+.md-inline {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 3px; padding: 1px 5px;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--green);
+}
+.md-heading { color: var(--accent); display: block; margin-bottom: 3px; }
+.md-li { display: block; padding-left: 6px; }
+.md-content a { color: var(--accent); text-decoration: underline; }
+
+/* Copy button */
+.copy-btn {
+  position: absolute; top: 6px; right: 4px;
+  font-size: 11px; padding: 1px 5px;
+  background: rgba(0,212,255,.06); color: var(--text3);
+  border: 1px solid var(--border); border-radius: 3px; cursor: pointer;
+  opacity: 0; transition: opacity .15s, color .15s;
+}
+td:hover .copy-btn { opacity: 1; }
+.copy-btn:hover { color: var(--accent); background: rgba(0,212,255,.14); }
+
+/* Row actions */
 td.row-act { width: 72px; padding: 4px 6px; }
-.row-btns { display: flex; gap: 3px; align-items: center; }
+.row-btns  { display: flex; gap: 3px; align-items: center; }
 .rbtn {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  padding: 2px 5px;
-  border: none;
-  border-radius: 3px;
-  cursor: pointer;
-  transition: background .12s;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  padding: 2px 5px; border: none; border-radius: 3px; cursor: pointer; transition: background .12s;
 }
 .rbtn-del { background: rgba(255,77,109,.15); color: var(--red); }
 .rbtn-del:hover { background: rgba(255,77,109,.35); }
@@ -293,134 +294,112 @@ td.row-act { width: 72px; padding: 4px 6px; }
 /* Add row button */
 .add-row-btn {
   display: flex; align-items: center; justify-content: center; gap: 5px;
-  width: 100%;
-  margin-top: 6px;
-  padding: 6px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  color: var(--green);
-  background: rgba(45,255,170,.05);
-  border: 1px dashed rgba(45,255,170,.25);
-  border-radius: 5px;
-  cursor: pointer;
-  transition: all .15s;
+  width: 100%; margin-top: 6px; padding: 6px;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: var(--green); background: rgba(45,255,170,.05);
+  border: 1px dashed rgba(45,255,170,.25); border-radius: 5px; cursor: pointer; transition: all .15s;
 }
 .add-row-btn:hover { background: rgba(45,255,170,.12); border-color: var(--green); }
 
-/* ═══════════════════ SMALL BUTTONS ═══════════════════ */
+/* ═══ SMALL BUTTONS ═════════════════════════════════ */
 .sbtn {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 4px 9px;
-  border-radius: 4px;
-  border: 1px solid;
-  cursor: pointer;
-  display: flex; align-items: center; gap: 4px;
-  transition: all .12s;
-  white-space: nowrap;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+  padding: 4px 9px; border-radius: 4px; border: 1px solid; cursor: pointer;
+  display: flex; align-items: center; gap: 4px; transition: all .12s; white-space: nowrap;
 }
-.sbtn-add  { background: rgba(45,255,170,.08); color: var(--green);  border-color: rgba(45,255,170,.3); }
-.sbtn-add:hover  { background: rgba(45,255,170,.2); }
-.sbtn-del  { background: rgba(255,77,109,.08); color: var(--red);    border-color: rgba(255,77,109,.3); }
-.sbtn-del:hover  { background: rgba(255,77,109,.2); }
+.sbtn-add    { background: rgba(45,255,170,.08); color: var(--green);  border-color: rgba(45,255,170,.3); }
+.sbtn-add:hover    { background: rgba(45,255,170,.2); }
+.sbtn-del    { background: rgba(255,77,109,.08); color: var(--red);    border-color: rgba(255,77,109,.3); }
+.sbtn-del:hover    { background: rgba(255,77,109,.2); }
+.sbtn-import { background: rgba(0,212,255,.08);  color: var(--accent); border-color: rgba(0,212,255,.25); }
+.sbtn-import:hover { background: rgba(0,212,255,.2); }
+.sbtn { background: rgba(0,212,255,.06); color: var(--text2); border-color: var(--border2); }
+.sbtn:hover { color: var(--accent); border-color: var(--accent2); }
 
-/* ═══════════════════ EMPTY STATE ═══════════════════ */
+/* ═══ SEARCH RESULTS ════════════════════════════════ */
+.search-results-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0 14px; border-bottom: 1px solid var(--border2); margin-bottom: 16px;
+  font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent);
+}
+.search-result-group { margin-bottom: 22px; }
+.search-result-meta {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 8px; flex-wrap: wrap;
+}
+.sr-tab   { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); }
+.sr-arrow { color: var(--text3); }
+.sr-block { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text2); }
+.sr-goto  { margin-left: auto; font-size: 10px; padding: 3px 8px; }
+
+/* ═══ EMPTY STATE ═══════════════════════════════════ */
 .empty-state {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 60px 20px;
-  color: var(--text3);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  gap: 12px;
-  text-align: center;
+  padding: 60px 20px; color: var(--text3);
+  font-family: 'JetBrains Mono', monospace; font-size: 13px; gap: 12px; text-align: center;
 }
 .empty-state .big { font-size: 32px; }
 
-/* ═══════════════════ SEARCH HIGHLIGHT ═══════════════════ */
+/* Search highlight */
 mark { background: rgba(255,209,102,.3); color: inherit; border-radius: 2px; }
 
-/* ═══════════════════ MODAL ═══════════════════ */
+/* ═══ MODAL ═════════════════════════════════════════ */
 .modal-overlay {
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
   z-index: 500; align-items: center; justify-content: center;
 }
 .modal-overlay.open { display: flex; }
-
 .modal {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: 10px;
-  padding: 22px 24px 20px;
-  width: 90%; max-width: 480px;
-  max-height: 80vh; overflow-y: auto;
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 22px 24px 20px;
+  width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto;
   box-shadow: 0 24px 60px rgba(0,0,0,.7);
 }
 .modal h3 {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: 1px;
-  margin-bottom: 16px;
+  font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700;
+  color: var(--accent); letter-spacing: 1px; margin-bottom: 16px;
 }
 .modal label {
-  display: block;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  color: var(--text2);
-  margin-bottom: 4px;
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--text2); margin-bottom: 4px;
 }
-.modal input, .modal textarea, .modal select {
+.modal input:not([type=radio]):not([type=file]),
+.modal textarea, .modal select {
   display: block; width: 100%;
-  background: var(--bg3);
-  border: 1px solid var(--border2);
-  color: var(--text);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  padding: 8px 10px;
-  border-radius: 5px;
-  outline: none;
-  margin-bottom: 12px;
-  transition: border-color .15s;
+  background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text); font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; padding: 8px 10px; border-radius: 5px; outline: none;
+  margin-bottom: 12px; transition: border-color .15s;
 }
+.modal input[type=file] { display: block; margin-bottom: 12px; }
 .modal input:focus, .modal textarea:focus, .modal select:focus { border-color: var(--accent); }
 .modal textarea { resize: vertical; min-height: 72px; line-height: 1.55; }
 .modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
 .mbtn-ok {
   background: var(--accent2); color: #fff;
   font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
-  padding: 7px 18px; border: none; border-radius: 5px; cursor: pointer;
-  transition: background .15s;
+  padding: 7px 18px; border: none; border-radius: 5px; cursor: pointer; transition: background .15s;
 }
 .mbtn-ok:hover { background: var(--accent); }
 .mbtn-cancel {
   background: transparent; color: var(--text3);
   font-family: 'JetBrains Mono', monospace; font-size: 12px;
-  padding: 7px 14px; border: 1px solid var(--border2); border-radius: 5px; cursor: pointer;
-  transition: all .15s;
+  padding: 7px 14px; border: 1px solid var(--border2); border-radius: 5px; cursor: pointer; transition: all .15s;
 }
 .mbtn-cancel:hover { border-color: var(--text2); color: var(--text); }
 
-/* ═══════════════════ TOAST ═══════════════════ */
+/* ═══ TOAST ═════════════════════════════════════════ */
 #toast {
   position: fixed; bottom: 20px; right: 20px;
-  background: var(--bg3); border: 1px solid var(--border2);
-  color: var(--green);
+  background: var(--bg3); border: 1px solid var(--border2); color: var(--green);
   font-family: 'JetBrains Mono', monospace; font-size: 11px;
   padding: 9px 16px; border-radius: 6px;
-  opacity: 0; transform: translateY(12px);
-  transition: all .25s; pointer-events: none; z-index: 999;
+  opacity: 0; transform: translateY(12px); transition: all .25s; pointer-events: none; z-index: 999;
 }
 #toast.show { opacity: 1; transform: translateY(0); }
 
-/* ═══════════════════ SCROLLBAR ═══════════════════ */
-#content::-webkit-scrollbar { width: 5px; }
-#content::-webkit-scrollbar-track { background: transparent; }
-#content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-
-/* ═══════════════════ RESPONSIVE ═══════════════════ */
+/* ═══ RESPONSIVE ════════════════════════════════════ */
 @media (max-width: 600px) {
   #header { padding: 10px 12px 0; }
   #content { padding: 14px 12px; }
@@ -433,509 +412,52 @@ mark { background: rgba(255,209,102,.3); color: inherit; border-radius: 2px; }
 
 <div id="app">
 
-  <!-- ── HEADER ── -->
+  <!-- HEADER -->
   <div id="header">
     <div class="header-top">
       <div class="logo">TORIDE <em>// CHEAT SHEET</em></div>
 
       <div class="search-wrap">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input type="text" id="searchInput" placeholder="検索… (Ctrl+K)" autocomplete="off">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+        </svg>
+        <input type="text" id="searchInput" placeholder="全タブ横断検索… (Ctrl+K)" autocomplete="off">
       </div>
 
       <div class="hdr-btns">
-        <button class="hbtn hbtn-edit" id="editBtn" onclick="toggleEdit()">✏️ <em>編集</em></button>
-        <button class="hbtn hbtn-save" onclick="saveToStorage()">💾 <em>保存</em></button>
+        <button class="hbtn hbtn-edit"   id="editBtn"  onclick="toggleEdit()">✏️ <em>編集</em></button>
+        <button class="hbtn hbtn-json"   onclick="exportJSON()">🗄 <em>JSON</em></button>
         <button class="hbtn hbtn-export" onclick="exportHTML()">📥 <em>書き出し</em></button>
-        <button class="hbtn hbtn-reset" onclick="resetData()" title="初期化">↺</button>
       </div>
     </div>
 
-    <!-- Tabs -->
+    <!-- Tab bar -->
     <div id="tabsBar">
-      <!-- rendered by JS -->
       <button class="tab-add" onclick="addTab()" title="タブを追加">＋</button>
     </div>
 
-    <div id="editBanner">✏️ EDIT MODE — クリックで編集 / ＋ で追加 / × で削除</div>
+    <div id="editBanner">✏️ EDIT MODE — クリックで編集 / ＋ で追加 / × で削除 / タブをドラッグで並び替え</div>
   </div>
 
-  <!-- ── CONTENT ── -->
-  <div id="content">
-    <!-- rendered by JS -->
-  </div>
+  <!-- CONTENT -->
+  <div id="content"></div>
 
 </div><!-- #app -->
 
-<!-- ── MODAL ── -->
+<!-- MODAL -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <h3 id="modalTitle"></h3>
     <div id="modalBody"></div>
     <div class="modal-btns">
       <button class="mbtn-cancel" onclick="closeModal()">キャンセル</button>
-      <button class="mbtn-ok" onclick="confirmModal()">OK</button>
+      <button class="mbtn-ok"     onclick="confirmModal()">OK</button>
     </div>
   </div>
 </div>
 
 <div id="toast"></div>
 
-<script>
-/* ═══════════════════════════════════════════════════
-   DATA MODEL
-   tab: { id, label, title, subtitle, blocks[] }
-   block: { id, label, headers[], rows[][] }
-═══════════════════════════════════════════════════ */
-
-// ── サンプルデータ（初回起動時のみ使用） ──────────────
-const SAMPLE = {
-  tabs: [
-    {
-      id: uid(), label: "📋 サンプルタブ",
-      title: "// タブのタイトル",
-      subtitle: "サブタイトル（説明文）",
-      blocks: [
-        {
-          id: uid(), label: "サンプルカテゴリ",
-          headers: ["項目", "説明", "備考"],
-          rows: [
-            ["サンプル行1", "ここに内容を入力", "備考欄"],
-            ["サンプル行2", "編集モードで編集できます", "✓"]
-          ]
-        }
-      ]
-    }
-  ]
-};
-
-// ── 永続化キー ───────────────────────────────────────
-const STORAGE_KEY = "toride_cs_v1";
-
-// ── ステート ─────────────────────────────────────────
-let data       = loadData();
-let activeId   = data.tabs[0]?.id ?? null;
-let editMode   = false;
-let modalCb    = null;
-
-/* ═══════════════════════════════════════════════════
-   PERSIST
-═══════════════════════════════════════════════════ */
-function loadData() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch(_) {}
-  return JSON.parse(JSON.stringify(SAMPLE));
-}
-
-function saveToStorage() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  toast("💾 保存しました");
-}
-
-function resetData() {
-  if (!confirm("データを初期化しますか？\n（ブラウザの保存データが消えます）")) return;
-  localStorage.removeItem(STORAGE_KEY);
-  data = JSON.parse(JSON.stringify(SAMPLE));
-  activeId = data.tabs[0]?.id ?? null;
-  render();
-  toast("↺ 初期化しました");
-}
-
-/* ═══════════════════════════════════════════════════
-   EXPORT — データをHTMLに焼き込んで保存
-═══════════════════════════════════════════════════ */
-function exportHTML() {
-  const escaped = JSON.stringify(data).replace(/`/g, "\\`");
-  // SAMPLE定義をエクスポートデータで上書きするスニペットを注入
-  const inject  = `\n  /* ── EXPORTED DATA ── */\n  const SAMPLE = JSON.parse(\`${escaped}\`);\n  /* ─────────────────── */\n`;
-  const src = document.documentElement.outerHTML
-    .replace("// ── サンプルデータ（初回起動時のみ使用） ──────────────", inject + "  // ── (replaced by export) ──");
-  const blob = new Blob([src], { type: "text/html;charset=utf-8" });
-  const a = Object.assign(document.createElement("a"), {
-    href: URL.createObjectURL(blob),
-    download: `toride_cheatsheet_${yyyymmdd()}.html`
-  });
-  a.click();
-  toast("📥 HTMLを書き出しました");
-}
-
-/* ═══════════════════════════════════════════════════
-   RENDER
-═══════════════════════════════════════════════════ */
-function render() {
-  renderTabs();
-  renderContent();
-}
-
-/* ── TABS ── */
-function renderTabs() {
-  const bar  = document.getElementById("tabsBar");
-  const addBtn = bar.querySelector(".tab-add");
-  // clear existing tab buttons
-  bar.querySelectorAll(".tab-btn").forEach(el => el.remove());
-
-  data.tabs.forEach(tab => {
-    const btn = document.createElement("button");
-    btn.className = "tab-btn" + (tab.id === activeId ? " active" : "");
-    btn.dataset.id = tab.id;
-
-    // Label (editable in edit mode)
-    const span = document.createElement("span");
-    span.textContent = tab.label;
-    span.className = "editable";
-    span.onclick = e => {
-      if (!editMode) { switchTab(tab.id); return; }
-      e.stopPropagation();
-      openModal("タブ名を編集", `
-        <label>タブ名（絵文字も使えます）</label>
-        <input id="mVal" value="${esc(tab.label)}">
-      `, () => {
-        const v = val("mVal"); if (!v) return;
-        tab.label = v; autoSave(); render();
-      });
-    };
-
-    // × close
-    const x = document.createElement("button");
-    x.className = "tab-close";
-    x.textContent = "×";
-    x.title = "タブを削除";
-    x.onclick = e => { e.stopPropagation(); deleteTab(tab.id); };
-
-    btn.append(span, x);
-    btn.onclick = () => switchTab(tab.id);
-    bar.insertBefore(btn, addBtn);
-  });
-}
-
-/* ── CONTENT ── */
-function renderContent() {
-  const el  = document.getElementById("content");
-  const tab = data.tabs.find(t => t.id === activeId);
-
-  if (!tab) {
-    el.innerHTML = `
-      <div class="empty-state">
-        <span class="big">📂</span>
-        <p>タブがありません</p>
-        <p style="color:var(--text3);font-size:11px">編集モードをオンにして「＋」からタブを追加してください</p>
-      </div>`;
-    return;
-  }
-
-  // Title row
-  let html = `
-    <div class="sec-head">
-      <div class="sec-title-wrap">
-        <div class="sec-title editable" data-field="title">${esc(tab.title)}</div>
-        <div class="sec-sub editable" data-field="subtitle">${esc(tab.subtitle)}</div>
-      </div>
-      <div class="sec-actions edit-only">
-        <button class="sbtn sbtn-add" onclick="addBlock()">＋ テーブル追加</button>
-      </div>
-    </div>`;
-
-  if (tab.blocks.length === 0) {
-    html += `
-      <div class="empty-state">
-        <span class="big">📊</span>
-        <p>ブロックがありません</p>
-        <p style="color:var(--text3);font-size:11px">「＋ テーブル追加」からブロックを追加してください</p>
-      </div>`;
-  }
-
-  tab.blocks.forEach((blk, bi) => {
-    // thead
-    const thCols = blk.headers.map((h, hi) =>
-      `<th class="editable" data-bi="${bi}" data-hi="${hi}">${esc(h)}</th>`
-    ).join("");
-
-    // tbody
-    const tbRows = blk.rows.map((row, ri) => {
-      const cells = blk.headers.map((_, ci) =>
-        `<td class="editable" data-bi="${bi}" data-ri="${ri}" data-ci="${ci}">${esc(row[ci] ?? "")}</td>`
-      ).join("");
-      return `
-        <tr data-bi="${bi}" data-ri="${ri}">
-          ${cells}
-          <td class="row-act edit-only">
-            <div class="row-btns">
-              <button class="rbtn rbtn-up"  onclick="moveRow(${bi},${ri},-1)" title="上へ">↑</button>
-              <button class="rbtn rbtn-dn"  onclick="moveRow(${bi},${ri}, 1)" title="下へ">↓</button>
-              <button class="rbtn rbtn-del" onclick="delRow(${bi},${ri})"     title="削除">✕</button>
-            </div>
-          </td>
-        </tr>`;
-    }).join("");
-
-    html += `
-      <div class="block" data-bi="${bi}">
-        <div class="block-head">
-          <div class="block-label editable" data-bi="${bi}" data-field="label">${esc(blk.label)}</div>
-          <div class="block-actions edit-only">
-            <button class="sbtn sbtn-add" onclick="addColumn(${bi})" title="列を追加">＋列</button>
-            <button class="sbtn sbtn-del" onclick="delBlock(${bi})">🗑 削除</button>
-          </div>
-        </div>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr>${thCols}<th class="edit-only" style="width:80px"></th></tr></thead>
-            <tbody>${tbRows}</tbody>
-          </table>
-        </div>
-        <button class="add-row-btn edit-only" onclick="addRow(${bi})">＋ 行を追加</button>
-      </div>`;
-  });
-
-  el.innerHTML = html;
-
-  // ── editable click handlers ──
-  el.querySelectorAll(".editable").forEach(node => {
-    node.addEventListener("click", () => {
-      if (!editMode) return;
-
-      // sec-title / sec-sub
-      if (node.dataset.field === "title") {
-        openModal("タイトルを編集", `<label>タイトル</label><input id="mVal" value="${esc(tab.title)}">`, () => {
-          tab.title = val("mVal"); autoSave(); renderContent();
-        }); return;
-      }
-      if (node.dataset.field === "subtitle") {
-        openModal("サブタイトルを編集", `<label>サブタイトル</label><input id="mVal" value="${esc(tab.subtitle)}">`, () => {
-          tab.subtitle = val("mVal"); autoSave(); renderContent();
-        }); return;
-      }
-
-      // block label
-      if (node.dataset.field === "label") {
-        const bi = +node.dataset.bi;
-        openModal("カテゴリ名を編集", `<label>カテゴリ名</label><input id="mVal" value="${esc(tab.blocks[bi].label)}">`, () => {
-          tab.blocks[bi].label = val("mVal"); autoSave(); renderContent();
-        }); return;
-      }
-
-      // header
-      if (node.dataset.hi !== undefined) {
-        const bi = +node.dataset.bi, hi = +node.dataset.hi;
-        openModal("ヘッダーを編集", `<label>ヘッダー名</label><input id="mVal" value="${esc(tab.blocks[bi].headers[hi])}">`, () => {
-          tab.blocks[bi].headers[hi] = val("mVal"); autoSave(); renderContent();
-        }); return;
-      }
-
-      // cell
-      if (node.dataset.ci !== undefined) {
-        const bi = +node.dataset.bi, ri = +node.dataset.ri, ci = +node.dataset.ci;
-        openModal("セルを編集", `<label>${esc(tab.blocks[bi].headers[ci])}</label><textarea id="mVal">${esc(tab.blocks[bi].rows[ri][ci])}</textarea>`, () => {
-          tab.blocks[bi].rows[ri][ci] = val("mVal"); autoSave(); renderContent();
-        });
-      }
-    });
-  });
-}
-
-/* ═══════════════════════════════════════════════════
-   EDIT ACTIONS — Tabs
-═══════════════════════════════════════════════════ */
-function toggleEdit() {
-  editMode = !editMode;
-  document.body.classList.toggle("edit", editMode);
-  document.getElementById("editBtn").classList.toggle("on", editMode);
-  document.getElementById("editBtn").innerHTML = editMode ? "✏️ <em>編集中</em>" : "✏️ <em>編集</em>";
-  renderContent(); // re-render to show/hide edit-only elements
-}
-
-function switchTab(id) { activeId = id; render(); }
-
-function addTab() {
-  openModal("新しいタブを追加", `
-    <label>タブ名（絵文字も使えます）</label>
-    <input id="mLabel" placeholder="例: 🔥 攻撃手法">
-    <label>タイトル</label>
-    <input id="mTitle" placeholder="例: // ATTACK TECHNIQUES">
-    <label>サブタイトル（任意）</label>
-    <input id="mSub" placeholder="簡単な説明">
-  `, () => {
-    const label = val("mLabel") || "新しいタブ";
-    const t = { id: uid(), label, title: val("mTitle") || `// ${label}`, subtitle: val("mSub"), blocks: [] };
-    data.tabs.push(t);
-    activeId = t.id;
-    autoSave(); render();
-  });
-}
-
-function deleteTab(id) {
-  const tab = data.tabs.find(t => t.id === id);
-  if (!confirm(`「${tab.label}」を削除しますか？`)) return;
-  data.tabs = data.tabs.filter(t => t.id !== id);
-  if (activeId === id) activeId = data.tabs[0]?.id ?? null;
-  autoSave(); render();
-}
-
-/* ═══════════════════════════════════════════════════
-   EDIT ACTIONS — Blocks
-═══════════════════════════════════════════════════ */
-function addBlock() {
-  openModal("テーブルブロックを追加", `
-    <label>カテゴリ名</label>
-    <input id="mLabel" placeholder="例: ログオン / 認証">
-    <label>列数</label>
-    <select id="mCols">
-      <option value="2">2列</option>
-      <option value="3" selected>3列</option>
-      <option value="4">4列</option>
-      <option value="5">5列</option>
-      <option value="6">6列</option>
-    </select>
-  `, () => {
-    const n   = parseInt(document.getElementById("mCols").value);
-    const blk = {
-      id: uid(),
-      label: val("mLabel") || "新しいカテゴリ",
-      headers: Array.from({ length: n }, (_, i) => `列${i + 1}`),
-      rows: []
-    };
-    curTab().blocks.push(blk);
-    autoSave(); renderContent();
-  });
-}
-
-function delBlock(bi) {
-  const tab = curTab();
-  if (!confirm(`「${tab.blocks[bi].label}」を削除しますか？`)) return;
-  tab.blocks.splice(bi, 1);
-  autoSave(); renderContent();
-}
-
-function addColumn(bi) {
-  openModal("列を追加", `
-    <label>列ヘッダー名</label>
-    <input id="mVal" placeholder="新しい列">
-  `, () => {
-    const blk = curTab().blocks[bi];
-    blk.headers.push(val("mVal") || "新しい列");
-    blk.rows.forEach(r => r.push(""));
-    autoSave(); renderContent();
-  });
-}
-
-/* ═══════════════════════════════════════════════════
-   EDIT ACTIONS — Rows
-═══════════════════════════════════════════════════ */
-function addRow(bi) {
-  const blk = curTab().blocks[bi];
-  const fields = blk.headers.map((h, i) =>
-    `<label>${esc(h)}</label><input class="mRowField" data-ci="${i}" placeholder="空欄も可">`
-  ).join("");
-  openModal("行を追加", fields, () => {
-    const row = Array.from(document.querySelectorAll(".mRowField")).map(el => el.value);
-    blk.rows.push(row);
-    autoSave(); renderContent();
-  });
-}
-
-function delRow(bi, ri) {
-  if (!confirm("この行を削除しますか？")) return;
-  curTab().blocks[bi].rows.splice(ri, 1);
-  autoSave(); renderContent();
-}
-
-function moveRow(bi, ri, dir) {
-  const rows = curTab().blocks[bi].rows;
-  const ni   = ri + dir;
-  if (ni < 0 || ni >= rows.length) return;
-  [rows[ri], rows[ni]] = [rows[ni], rows[ri]];
-  autoSave(); renderContent();
-}
-
-/* ═══════════════════════════════════════════════════
-   SEARCH
-═══════════════════════════════════════════════════ */
-document.getElementById("searchInput").addEventListener("input", function () {
-  const q = this.value.trim().toLowerCase();
-  clearMarks();
-  if (!q) return;
-
-  let any = false;
-  document.querySelectorAll("tbody tr").forEach(row => {
-    const match = row.textContent.toLowerCase().includes(q);
-    row.classList.toggle("hidden", !match);
-    if (match) { highlightIn(row, q); any = true; }
-  });
-});
-
-function clearMarks() {
-  document.querySelectorAll("mark").forEach(m => {
-    m.replaceWith(document.createTextNode(m.textContent));
-  });
-  document.querySelectorAll("tbody tr.hidden").forEach(r => r.classList.remove("hidden"));
-}
-
-function highlightIn(node, q) {
-  if (node.nodeType === 3) {
-    const i = node.textContent.toLowerCase().indexOf(q);
-    if (i < 0) return;
-    const range = document.createRange();
-    range.setStart(node, i); range.setEnd(node, i + q.length);
-    range.surroundContents(document.createElement("mark"));
-    return;
-  }
-  if (node.nodeType === 1 && !["SCRIPT","STYLE","MARK","BUTTON"].includes(node.tagName))
-    [...node.childNodes].forEach(c => highlightIn(c, q));
-}
-
-/* ═══════════════════════════════════════════════════
-   MODAL
-═══════════════════════════════════════════════════ */
-function openModal(title, bodyHTML, cb) {
-  document.getElementById("modalTitle").textContent = title;
-  document.getElementById("modalBody").innerHTML = bodyHTML;
-  document.getElementById("modalOverlay").classList.add("open");
-  modalCb = cb;
-  setTimeout(() => document.querySelector("#modalBody input, #modalBody textarea, #modalBody select")?.focus(), 40);
-}
-function closeModal() { document.getElementById("modalOverlay").classList.remove("open"); modalCb = null; }
-function confirmModal() { modalCb?.(); closeModal(); }
-
-document.getElementById("modalOverlay").addEventListener("click", e => { if (e.target === e.currentTarget) closeModal(); });
-
-/* ═══════════════════════════════════════════════════
-   KEYBOARD
-═══════════════════════════════════════════════════ */
-document.addEventListener("keydown", e => {
-  if ((e.ctrlKey || e.metaKey) && e.key === "k") { e.preventDefault(); document.getElementById("searchInput").focus(); }
-  if (e.key === "Escape") {
-    if (document.getElementById("modalOverlay").classList.contains("open")) { closeModal(); return; }
-    document.getElementById("searchInput").value = ""; clearMarks();
-  }
-  if (e.key === "Enter" && document.getElementById("modalOverlay").classList.contains("open")) {
-    if (document.activeElement.tagName !== "TEXTAREA") { e.preventDefault(); confirmModal(); }
-  }
-});
-
-/* ═══════════════════════════════════════════════════
-   UTILS
-═══════════════════════════════════════════════════ */
-function uid()     { return Math.random().toString(36).slice(2, 9); }
-function esc(s)    { return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
-function val(id)   { return document.getElementById(id)?.value ?? ""; }
-function curTab()  { return data.tabs.find(t => t.id === activeId); }
-function yyyymmdd(){ return new Date().toISOString().slice(0,10); }
-function autoSave(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
-
-function toast(msg) {
-  const el = document.getElementById("toast");
-  el.textContent = msg;
-  el.classList.add("show");
-  clearTimeout(toast._t);
-  toast._t = setTimeout(() => el.classList.remove("show"), 2400);
-}
-
-/* ═══════════════════════════════════════════════════
-   BOOT
-═══════════════════════════════════════════════════ */
-render();
-</script>
+<script src="app.js"></script>
 </body>
 </html>
