@@ -104,6 +104,37 @@ export default async function handler(req, res) {
     return;
   }
 
+  // ── GET /latest → GitHub API から最新 data.json を返す ──
+  {
+    const rawPathL = req.headers['x-matched-path'] || req.headers['x-invoke-path'] || req.url;
+    const reqPathL = rawPathL.split('?')[0].replace(/^\/api\/auth/, '') || '/';
+    if (reqPathL === '/latest') {
+      if (!GH_TOKEN || !GH_OWNER || !GH_REPO) {
+        res.status(500).json({ error: 'GitHub env vars not configured' });
+        return;
+      }
+      try {
+        const ghRes = await fetch(
+          `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/data.json?ref=${GH_BRANCH}`,
+          { headers: { Authorization: `token ${GH_TOKEN}`, Accept: 'application/vnd.github.v3.raw' } }
+        );
+        if (!ghRes.ok) {
+          const err = await ghRes.text();
+          res.status(502).json({ error: 'GitHub GET failed', detail: err });
+          return;
+        }
+        const raw = await ghRes.text();
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.status(200).send(raw);
+        return;
+      } catch (err) {
+        res.status(502).json({ error: err.message });
+        return;
+      }
+    }
+  }
+
   // ── GET: ファイルを返す ──────────────────────────────
   const rawPath  = req.headers['x-matched-path'] || req.headers['x-invoke-path'] || req.url;
   const reqPath  = rawPath.split('?')[0].replace(/^\/api\/auth/, '') || '/';
