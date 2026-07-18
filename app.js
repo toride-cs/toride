@@ -294,11 +294,12 @@ function renderBlock(tab, blk, bi) {
   const tbRows = blk.rows.map((row, ri) => {
     const cells = blk.headers.map((_, ci) => {
       const raw = row[ci] ?? "";
+      const copyBtn = String(raw).trim() ? `<button class="copy-btn" data-copy="${esc(raw)}" onclick="copyCell(event, this.dataset.copy)" title="コピー">
+          <span class="material-symbols-rounded">content_copy</span>
+        </button>` : "";
       return `<td class="editable md-cell ${noWrap(ci)?'nowrap-col':''}" data-bi="${bi}" data-ri="${ri}" data-ci="${ci}">
         <div class="md-content">${renderMd(raw)}</div>
-        <button class="copy-btn" data-copy="${esc(raw)}" onclick="copyCell(event, this.dataset.copy)" title="コピー">
-          <span class="material-symbols-rounded">content_copy</span>
-        </button>
+        ${copyBtn}
       </td>`;
     }).join("");
     return `<tr data-bi="${bi}" data-ri="${ri}">
@@ -436,9 +437,10 @@ function renderSearch() {
       const tbRows = matchRows.map(row => {
         const cells = blk.headers.map((_, ci) => {
           const raw = row[ci] ?? "";
+          const copyBtn = String(raw).trim() ? `<button class="copy-btn" data-copy="${esc(raw)}" onclick="copyCell(event, this.dataset.copy)" title="コピー"><span class="material-symbols-rounded">content_copy</span></button>` : "";
           return `<td class="md-cell">
             <div class="md-content">${highlightMd(raw, q)}</div>
-            <button class="copy-btn" data-copy="${esc(raw)}" onclick="copyCell(event, this.dataset.copy)" title="コピー"><span class="material-symbols-rounded">content_copy</span></button>
+            ${copyBtn}
           </td>`;
         }).join("");
         return `<tr>${cells}</tr>`;
@@ -563,12 +565,46 @@ function highlightMd(raw, q) {
 ════════════════════════════════════════════════════ */
 function copyCell(e, text) {
   e.stopPropagation();
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = e.currentTarget;
+  const btn = e.currentTarget;           // 同期のうちに参照を確保
+  const showOk = () => {
+    if (!btn) return;
     btn.classList.add("copied");
     btn.innerHTML = `<span class="material-symbols-rounded">check</span>`;
-    setTimeout(() => { btn.classList.remove("copied"); btn.innerHTML = `<span class="material-symbols-rounded">content_copy</span>`; }, 1200);
-  }).catch(()=> toast("❌ コピーに失敗しました"));
+    setTimeout(() => {
+      btn.classList.remove("copied");
+      btn.innerHTML = `<span class="material-symbols-rounded">content_copy</span>`;
+    }, 1200);
+  };
+  const showFail = () => toast("❌ コピーに失敗しました");
+
+  // ① モダンな Clipboard API（HTTPS / localhost で有効）
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(showOk).catch(() => {
+      if (!legacyCopy(text)) showFail(); else showOk();
+    });
+    return;
+  }
+  // ② フォールバック（HTTP など非セキュアコンテキスト）
+  if (legacyCopy(text)) showOk(); else showFail();
+}
+
+/* execCommand によるレガシーコピー。成功で true */
+function legacyCopy(text) {
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none;";
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch (err) {
+    console.error("legacyCopy failed", err);
+    return false;
+  }
 }
 
 /* ═══════════════════════════════════════════════════

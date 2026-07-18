@@ -435,17 +435,25 @@ th.nowrap-col { white-space: nowrap; }
 }
 
 .copy-btn {
-  position: absolute; top: 8px; right: 8px;
+  position: absolute; top: 6px; right: 6px;
   width: 32px; height: 32px; border-radius: var(--radius-sm);
   display: grid; place-items: center; opacity: 0;
   color: var(--md-on-surface-var); background: var(--md-surface);
   border: 1px solid var(--md-outline-var);
   transition: opacity .15s, background .15s, color .15s;
+  cursor: pointer; z-index: 2;
 }
 .copy-btn .material-symbols-rounded { font-size: 18px; }
+/* 行にカーソルが乗ったら、その行の全セルのコピーボタンをうっすら表示 */
+tbody tr:hover .copy-btn { opacity: .5; }
+/* セル個別にホバーしたら、そのボタンをはっきり表示 */
 td:hover .copy-btn { opacity: 1; }
-.copy-btn:hover { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+.copy-btn:hover { background: var(--md-primary-container); color: var(--md-on-primary-container); opacity: 1; }
 .copy-btn.copied { color: var(--md-success); opacity: 1; }
+/* タッチ端末では常時表示（ホバーが無いため） */
+@media (hover: none) {
+  .copy-btn { opacity: .55; }
+}
 
 .add-row-btn {
   display: none; align-items: center; gap: var(--sp-2);
