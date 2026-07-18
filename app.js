@@ -151,7 +151,7 @@ function renderContent() {
         const rendered = renderMd(raw);
         return `<td class="editable md-cell" data-bi="${bi}" data-ri="${ri}" data-ci="${ci}">
           <div class="md-content">${rendered}</div>
-          <button class="copy-btn" onclick="copyCell(event,'${esc(raw).replace(/'/g,"&#39;")}')" title="コピー">⧉</button>
+          <button class="copy-btn" data-copy="${esc(raw)}" onclick="copyCell(event, this.dataset.copy)" title="コピー">⧉</button>
         </td>`;
       }).join("");
 
@@ -360,11 +360,15 @@ function editBlockTags(bi) {
 function renderMd(raw) {
   if (!raw) return "";
   let s = esc(raw);
+  // ── FIX: コード部分を一旦退避し、装飾(** * 等)の対象から外す ──
+  //    これが無いと `zcat 2023-10-*/dns.*.gz` の * が斜体記法と誤認されコマンドが壊れる
+  const __stash = [];
+  const __keep  = (html) => `\u0000${__stash.push(html) - 1}\u0000`;
   // code block (``` ... ```)
   s = s.replace(/```([^`]*?)```/gs, (_, code) =>
-    `<pre class="md-code">${code.replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&")}</pre>`);
+    __keep(`<pre class="md-code">${code.replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&")}</pre>`));
   // inline code
-  s = s.replace(/`([^`]+)`/g, (_, c) => `<code class="md-inline">${c}</code>`);
+  s = s.replace(/`([^`]+)`/g, (_, c) => __keep(`<code class="md-inline">${c}</code>`));
   // bold
   s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   // italic
@@ -377,7 +381,10 @@ function renderMd(raw) {
   // list items
   s = s.replace(/^[-*] (.+)$/gm, (_, t) => `<span class="md-li">• ${t}</span>`);
   // newlines → <br> (outside pre blocks)
-  s = s.replace(/(?<!<\/pre>)\n/g, "<br>");
+  s = s.replace(/\n/g, "<br>");
+  // ── FIX: 退避したコードを復元 ──
+  s = s.replace(/\u0000(\d+)\u0000/g, (_, i) => __stash[i]);
+  s = s.replace(/<\/pre><br>/g, "</pre>");
   return s;
 }
 
@@ -399,7 +406,7 @@ function highlightStr(escaped, q) {
 ════════════════════════════════════════════════════ */
 function copyCell(e, text) {
   e.stopPropagation();
-  navigator.clipboard.writeText(text.replace(/&#39;/g,"'")).then(() => {
+  navigator.clipboard.writeText(text).then(() => {
     const btn = e.target;
     btn.textContent = "✓";
     setTimeout(() => { btn.textContent = "⧉"; }, 1200);
