@@ -11,7 +11,8 @@
 ════════════════════════════════════════════════════════ */
 
 /* ── STATE ─────────────────────────────────────────── */
-let data       = { tabs: [] };
+let data       = { tabs: [], machines: [], phases: [] };
+let appMode    = "cheatsheet";  // "cheatsheet" | "logbook"
 let activeId   = null;          // current sheet (tab) id
 let activeCat  = null;          // current category
 let view       = "home";        // home | cat | tab | search
@@ -19,6 +20,13 @@ let editMode   = false;
 let modalCb    = null;
 let activeTag  = null;          // tag filter within a sheet
 let searchMode = false;
+
+/* logbook state */
+let lbView       = "machines";  // machines | machine
+let lbMachineId  = null;        // 開いているマシン
+let lbAttemptId  = null;        // 開いている試行
+let lbPhaseFilter= null;        // フェーズ絞り込み (null=すべて)
+let lbFilter     = "all";       // machines一覧のフィルタ
 
 /* category presentation metadata (order + icon + description) */
 const CAT_META = {
@@ -34,6 +42,14 @@ const CAT_ORDER = ["GNFA","GDAT","GCFA","OSDA","汎用","未分類"];
 /* ── BOOT ───────────────────────────────────────────── */
 let loadedSnapshot = null;   // 読み込んだ時点のdata.json文字列（保存前の競合検出用）
 let dataSource = "unknown";  // "github" | "bundled" | "preloaded" | "empty"
+
+const DEFAULT_PHASES = [
+  { id: "recon",    label: "recon",    color: "#5aa9e0" },
+  { id: "enum",     label: "enum",     color: "#b085e0" },
+  { id: "foothold", label: "foothold", color: "#e0a944" },
+  { id: "privesc",  label: "privesc",  color: "#e05c5c" },
+  { id: "loot",     label: "loot",     color: "#3fd07f" },
+];
 
 (async function init() {
   // theme
@@ -84,11 +100,56 @@ let dataSource = "unknown";  // "github" | "bundled" | "preloaded" | "empty"
   }
 })();
 
+/* デフォルトのフェーズ定義（ユーザーが編集可能） */
+
 function normalizeData() {
+  // ── チートシート（既存・無変更） ──
   (data.tabs || []).forEach(t => {
     t.id = t.id || uid();
     t.category = t.category || "未分類";
     (t.blocks || []).forEach(b => { b.id = b.id || uid(); b.tags = b.tags || []; });
+  });
+  if (!Array.isArray(data.tabs)) data.tabs = [];
+
+  // ── ログブック（新規・後方互換） ──
+  if (!Array.isArray(data.phases) || !data.phases.length) {
+    data.phases = JSON.parse(JSON.stringify(DEFAULT_PHASES));
+  }
+  data.phases.forEach(p => { p.id = p.id || uid(); p.color = p.color || "#7d9186"; p.label = p.label || p.id; });
+
+  if (!Array.isArray(data.machines)) data.machines = [];
+  data.machines.forEach(m => {
+    m.id = m.id || uid();
+    m.name = m.name || "無名マシン";
+    m.platform = m.platform || "";
+    m.ip = m.ip || "";
+    m.os = m.os || "";
+    m.difficulty = m.difficulty ?? 1;
+    m.tags = m.tags || [];
+    if (!Array.isArray(m.attempts) || !m.attempts.length) {
+      // 旧形式（stepsを直接持つ）からの移行 or 新規
+      m.attempts = [{
+        id: uid(), label: "1回目", status: m.status || "進行中",
+        started_at: m.started_at || Date.now(), rooted_at: null,
+        steps: m.steps || [], creds: m.creds || [], loot: m.loot || [],
+      }];
+    }
+    m.attempts.forEach(a => {
+      a.id = a.id || uid();
+      a.label = a.label || "挑戦";
+      a.status = a.status || "進行中";
+      a.steps = a.steps || [];
+      a.creds = a.creds || [];
+      a.loot = a.loot || [];
+      a.steps.forEach(s => {
+        s.id = s.id || uid();
+        s.phase = s.phase || "";       // 空 = 未分類
+        s.command = s.command || "";
+        s.note = s.note || "";
+        s.learning = s.learning || "";
+        s.ts = s.ts || Date.now();
+      });
+    });
   });
 }
 
@@ -134,11 +195,35 @@ function gotoTab(id) { closeSidebar(); switchTab(id); }
    RENDER — top level
 ════════════════════════════════════════════════════ */
 function render() {
+  syncModeUI();
+  if (appMode === "logbook") { renderLogbook(); return; }
   renderNav();
   if (searchMode)       renderSearch();
   else if (view === "home") renderHome();
   else if (view === "cat")  renderCategory();
   else                  renderSheet();
+}
+
+/* モード切替 */
+function setMode(mode) {
+  if (appMode === mode) return;
+  appMode = mode;
+  searchMode = false;
+  clearSearchInput();
+  document.body.classList.toggle("mode-logbook", mode === "logbook");
+  render();
+  document.getElementById("main").scrollTop = 0;
+  try { window.scrollTo(0, 0); } catch(e){}
+}
+function syncModeUI() {
+  document.querySelectorAll("[data-mode]").forEach(btn => {
+    btn.classList.toggle("on", btn.dataset.mode === appMode);
+  });
+  // 検索プレースホルダをモードに合わせる
+  const si = document.getElementById("searchInput");
+  if (si) si.placeholder = appMode === "logbook"
+    ? "マシン・コマンド・技を検索…"
+    : "コマンド・フィールド・コードを検索…";
 }
 
 /* ── SIDEBAR NAV ── */
@@ -395,12 +480,14 @@ function bindGlobalUI() {
     const q = this.value.trim();
     document.getElementById("searchClear").classList.toggle("show", q.length>0);
     if (!q) { searchMode = false; render(); return; }
-    searchMode = true; renderNav(); renderSearch();
+    searchMode = true;
+    if (appMode === "logbook") { renderLbSearch(); return; }
+    renderNav(); renderSearch();
   });
   document.getElementById("searchClear").onclick = () => { clearSearchInput(); searchMode=false; render(); si.focus(); };
 
-  document.getElementById("brandHome").onclick = goHome;
-  document.getElementById("brandHome").onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); goHome(); } };
+  document.getElementById("brandHome").onclick = () => { if (appMode === "logbook") { lbView="machines"; lbMachineId=null; searchMode=false; clearSearchInput(); render(); } else goHome(); };
+  document.getElementById("brandHome").onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); document.getElementById("brandHome").onclick(); } };
 
   document.getElementById("themeToggle").onclick = toggleTheme;
   document.getElementById("editToggle").onclick = toggleEdit;
@@ -409,6 +496,11 @@ function bindGlobalUI() {
   document.getElementById("menuToggle").onclick = openSidebar;
   document.getElementById("sidebarScrim").onclick = closeSidebar;
   document.getElementById("importFile").addEventListener("change", onImportFile);
+
+  // モード切替ボタン
+  document.querySelectorAll("[data-mode]").forEach(btn => {
+    btn.addEventListener("click", () => setMode(btn.dataset.mode));
+  });
 
   // header shadow on scroll
   const main = document.getElementById("main");
