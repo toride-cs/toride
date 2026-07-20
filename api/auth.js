@@ -12,6 +12,7 @@ const ALLOWED_FILES = {
   '/':           'index.html',
   '/index.html': 'index.html',
   '/app.js':     'app.js',
+  '/logbook.js': 'logbook.js',
   '/data.json':  'data.json',
 };
 
