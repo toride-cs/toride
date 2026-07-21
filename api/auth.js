@@ -16,6 +16,7 @@ const ALLOWED_FILES = {
   '/hunting.js': 'hunting.js',
   '/web.js':     'web.js',
   '/tools.js':   'tools.js',
+  '/knowledge.js': 'knowledge.js',
   '/data.json':  'data.json',
 };
 
