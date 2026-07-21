@@ -13,6 +13,8 @@ const ALLOWED_FILES = {
   '/index.html': 'index.html',
   '/app.js':     'app.js',
   '/logbook.js': 'logbook.js',
+  '/hunting.js': 'hunting.js',
+  '/web.js':     'web.js',
   '/data.json':  'data.json',
 };
 
