@@ -1187,6 +1187,21 @@ body.edit #editBanner { display: flex; }
 .tool-ref-item { display: flex; align-items: center; gap: 10px; font-size: 13px; padding: 9px 13px; background: var(--md-surface); border: 1px solid var(--md-outline-var); border-radius: 8px; }
 .tool-ref-item a { color: var(--md-primary); text-decoration: none; word-break: break-all; }
 .tool-ref-item a:hover { text-decoration: underline; }
+
+/* knowledge */
+.know-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px,1fr)); gap: 14px; }
+.know-card { background: var(--md-surface); border: 1px solid var(--md-outline-var); border-radius: var(--radius-lg); padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; transition: box-shadow .15s, transform .15s; }
+.know-card:hover { box-shadow: var(--shadow-2); transform: translateY(-2px); }
+.know-card-top { display: flex; align-items: center; gap: 8px; }
+.know-kind { font-family: var(--font-mono); font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: .4px; }
+.know-edit { margin-left: auto; width: 26px; height: 26px; display: grid; place-items: center; color: var(--md-on-surface-var); border: 1px solid transparent; border-radius: 5px; }
+.know-edit:hover { background: var(--md-surface-2); border-color: var(--md-outline-var); }
+.know-title { font-size: 15px; font-weight: 700; line-height: 1.4; }
+.know-title a { color: var(--md-on-surface); text-decoration: none; }
+.know-title a:hover { color: var(--md-primary); }
+.know-desc { font-size: 12.5px; color: var(--md-on-surface-var); line-height: 1.5; }
+.know-url { font-family: var(--font-mono); font-size: 11px; color: var(--md-primary); word-break: break-all; opacity: .8; }
+.know-foot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: auto; padding-top: 4px; }
 </style>
 </head>
 <body>
@@ -1204,6 +1219,7 @@ body.edit #editBanner { display: flex; }
     <div class="mode-switch" id="modeSwitch">
       <button data-mode="cheatsheet" class="on" title="チートシート"><span class="material-symbols-rounded">grid_view</span><span class="mode-label">チートシート</span></button>
       <button data-mode="tools" title="ツール・リファレンス"><span class="material-symbols-rounded">build</span><span class="mode-label">ツール</span></button>
+      <button data-mode="knowledge" title="ナレッジ・リンク集"><span class="material-symbols-rounded">menu_book</span><span class="mode-label">ナレッジ</span></button>
       <span class="mode-group-sep" title="攻撃"></span>
       <button data-mode="logbook" title="攻撃ログブック"><span class="material-symbols-rounded">track_changes</span><span class="mode-label">攻撃ログ</span></button>
       <button data-mode="web" title="Web攻略 (OSWA)"><span class="material-symbols-rounded">language</span><span class="mode-label">Web攻略</span></button>
@@ -1277,5 +1293,6 @@ body.edit #editBanner { display: flex; }
 <script src="hunting.js"></script>
 <script src="web.js"></script>
 <script src="tools.js"></script>
+<script src="knowledge.js"></script>
 </body>
 </html>

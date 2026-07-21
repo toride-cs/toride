@@ -11,8 +11,8 @@
 ════════════════════════════════════════════════════════ */
 
 /* ── STATE ─────────────────────────────────────────── */
-let data       = { tabs: [], machines: [], phases: [], hunts: [], queries: [], targets: [], payloads: [], vulnTypes: [], tools: [] };
-let appMode    = "cheatsheet";  // "cheatsheet" | "logbook" | "hunt" | "query" | "coverage" | "web" | "payload" | "tools"
+let data       = { tabs: [], machines: [], phases: [], hunts: [], queries: [], targets: [], payloads: [], vulnTypes: [], tools: [], knowledge: [] };
+let appMode    = "cheatsheet";  // ... | "tools" | "knowledge"
 let activeId   = null;          // current sheet (tab) id
 let activeCat  = null;          // current category
 let view       = "home";        // home | cat | tab | search
@@ -50,6 +50,12 @@ let toolsView     = "list";     // list | tool
 let toolId        = null;       // 開いているツール
 let toolCertFilter = "all";     // 資格タブ（メイン軸）
 let toolCatFilter = null;       // カテゴリ絞り込み
+
+/* knowledge state */
+let knowView      = "list";     // list (詳細ページは無し・リンクは直接開く)
+let knowCertFilter = "all";
+let knowCatFilter = null;
+let knowKindFilter = null;
 
 /* category presentation metadata (order + icon + description) */
 const CAT_META = {
@@ -126,6 +132,17 @@ const TOOL_PRIORITY = {
   opt:  { label: "便利",     color: "#7d9186", cls: "opt" },
 };
 const TOOL_CATEGORIES = ["recon", "web", "sqli", "fuzzing", "exploit", "enum", "privesc", "その他"];
+
+/* knowledge constants */
+const KNOW_KINDS = {
+  cheatsheet: { label: "cheatsheet", color: "#45c8b0" },
+  wordlist:   { label: "wordlist",   color: "#e0a944" },
+  lab:        { label: "lab",        color: "#5aa9e0" },
+  tool:       { label: "tool",       color: "#e08a4d" },
+  doc:        { label: "doc",        color: "#7d9186" },
+  writeup:    { label: "writeup",    color: "#b085e0" },
+};
+const KNOW_CATEGORIES = ["reference", "methodology", "recon", "web", "xss", "sqli", "ssti", "ssrf", "lfi", "xxe", "idor", "fuzzing", "wordlist", "lab", "その他"];
 
 (async function init() {
   // theme
@@ -327,6 +344,19 @@ function normalizeData() {
     t.reference.forEach(r => { r.label = r.label || r.url || ""; r.url = r.url || ""; });
     t.ts = t.ts || Date.now();
   });
+
+  // ── ナレッジ・リンク集（新規・後方互換） ──
+  if (!Array.isArray(data.knowledge)) data.knowledge = [];
+  data.knowledge.forEach(k => {
+    k.id = k.id || uid();
+    k.title = k.title || "無題";
+    k.url = k.url || "";
+    k.certs = Array.isArray(k.certs) ? k.certs : [];
+    k.category = k.category || "reference";
+    k.kind = k.kind || "doc";
+    k.desc = k.desc || "";
+    k.ts = k.ts || Date.now();
+  });
 }
 
 /* categories present in data, ordered */
@@ -379,6 +409,7 @@ function render() {
   if (appMode === "web")     { renderWeb(); return; }
   if (appMode === "payload") { renderPayloadLib(); return; }
   if (appMode === "tools")   { renderTools(); return; }
+  if (appMode === "knowledge") { renderKnowledge(); return; }
   renderNav();
   if (searchMode)       renderSearch();
   else if (view === "home") renderHome();
@@ -399,6 +430,7 @@ function setMode(mode) {
   document.body.classList.toggle("mode-web", mode === "web");
   document.body.classList.toggle("mode-payload", mode === "payload");
   document.body.classList.toggle("mode-tools", mode === "tools");
+  document.body.classList.toggle("mode-knowledge", mode === "knowledge");
   render();
   document.getElementById("main").scrollTop = 0;
   try { window.scrollTo(0, 0); } catch(e){}
@@ -417,6 +449,7 @@ function syncModeUI() {
       web: "ターゲット・脆弱性・URLを検索…",
       payload: "ペイロード・タイプ・用途を検索…",
       tools: "ツール・コマンドを検索…",
+      knowledge: "ナレッジ・URL・タグを検索…",
       cheatsheet: "コマンド・フィールド・コードを検索…"
     };
     si.placeholder = ph[appMode] ?? ph.cheatsheet;
@@ -685,6 +718,7 @@ function bindGlobalUI() {
     if (appMode === "web")     { renderWebSearch(); return; }
     if (appMode === "payload") { renderPayloadSearch(); return; }
     if (appMode === "tools")   { renderToolsSearch(); return; }
+    if (appMode === "knowledge") { renderKnowledgeSearch(); return; }
     renderNav(); renderSearch();
   });
   document.getElementById("searchClear").onclick = () => { clearSearchInput(); searchMode=false; render(); si.focus(); };
@@ -697,6 +731,7 @@ function bindGlobalUI() {
     else if (appMode === "web") { webView="targets"; webTargetId=null; searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "payload") { searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "tools") { toolsView="list"; toolId=null; searchMode=false; clearSearchInput(); render(); }
+    else if (appMode === "knowledge") { searchMode=false; clearSearchInput(); render(); }
     else goHome();
   };
   document.getElementById("brandHome").onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); document.getElementById("brandHome").onclick(); } };
