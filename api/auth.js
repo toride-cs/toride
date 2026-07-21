@@ -15,6 +15,7 @@ const ALLOWED_FILES = {
   '/logbook.js': 'logbook.js',
   '/hunting.js': 'hunting.js',
   '/web.js':     'web.js',
+  '/tools.js':   'tools.js',
   '/data.json':  'data.json',
 };
 
