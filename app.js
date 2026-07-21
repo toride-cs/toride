@@ -11,8 +11,8 @@
 ════════════════════════════════════════════════════════ */
 
 /* ── STATE ─────────────────────────────────────────── */
-let data       = { tabs: [], machines: [], phases: [], hunts: [], queries: [], targets: [], payloads: [], vulnTypes: [] };
-let appMode    = "cheatsheet";  // "cheatsheet" | "logbook" | "hunt" | "query" | "coverage" | "web" | "payload"
+let data       = { tabs: [], machines: [], phases: [], hunts: [], queries: [], targets: [], payloads: [], vulnTypes: [], tools: [] };
+let appMode    = "cheatsheet";  // "cheatsheet" | "logbook" | "hunt" | "query" | "coverage" | "web" | "payload" | "tools"
 let activeId   = null;          // current sheet (tab) id
 let activeCat  = null;          // current category
 let view       = "home";        // home | cat | tab | search
@@ -44,6 +44,12 @@ let webVtFilter   = null;       // ターゲット詳細の脆弱性タイプ絞
 let webFilter     = "all";      // ターゲット一覧のフィルタ
 let payloadVtFilter = null;     // ペイロード一覧の脆弱性タイプ絞り込み
 let webInputVt    = null;       // ワンライン入力の選択中タイプ
+
+/* tools state */
+let toolsView     = "list";     // list | tool
+let toolId        = null;       // 開いているツール
+let toolCertFilter = "all";     // 資格タブ（メイン軸）
+let toolCatFilter = null;       // カテゴリ絞り込み
 
 /* category presentation metadata (order + icon + description) */
 const CAT_META = {
@@ -112,6 +118,14 @@ const WEB_VERDICTS = [
   { id: "confirmed", label: "confirmed", color: "#3fd07f" },
   { id: "testing",   label: "testing",   color: "#e0a944" },
 ];
+
+/* tools constants */
+const TOOL_PRIORITY = {
+  must: { label: "必須",     color: "#e05c5c", cls: "must" },
+  rec:  { label: "おすすめ", color: "#e0a944", cls: "rec" },
+  opt:  { label: "便利",     color: "#7d9186", cls: "opt" },
+};
+const TOOL_CATEGORIES = ["recon", "web", "sqli", "fuzzing", "exploit", "enum", "privesc", "その他"];
 
 (async function init() {
   // theme
@@ -296,6 +310,23 @@ function normalizeData() {
     p.reference = p.reference || "";
     p.ts = p.ts || Date.now();
   });
+
+  // ── ツール・リファレンス（新規・後方互換） ──
+  if (!Array.isArray(data.tools)) data.tools = [];
+  data.tools.forEach(t => {
+    t.id = t.id || uid();
+    t.name = t.name || "無名ツール";
+    t.certs = Array.isArray(t.certs) ? t.certs : [];   // ["OSWA","OSCP"]
+    t.category = t.category || "その他";
+    t.priority = t.priority || "opt";                   // must|rec|opt
+    t.summary = t.summary || "";
+    t.commands = Array.isArray(t.commands) ? t.commands : [];
+    t.commands.forEach(c => { c.id = c.id || uid(); c.label = c.label || ""; c.cmd = c.cmd || ""; c.note = c.note || ""; });
+    t.tips = t.tips || "";
+    t.reference = Array.isArray(t.reference) ? t.reference : [];
+    t.reference.forEach(r => { r.label = r.label || r.url || ""; r.url = r.url || ""; });
+    t.ts = t.ts || Date.now();
+  });
 }
 
 /* categories present in data, ordered */
@@ -347,6 +378,7 @@ function render() {
   if (appMode === "coverage"){ renderCoverage(); return; }
   if (appMode === "web")     { renderWeb(); return; }
   if (appMode === "payload") { renderPayloadLib(); return; }
+  if (appMode === "tools")   { renderTools(); return; }
   renderNav();
   if (searchMode)       renderSearch();
   else if (view === "home") renderHome();
@@ -366,6 +398,7 @@ function setMode(mode) {
   document.body.classList.toggle("mode-coverage", mode === "coverage");
   document.body.classList.toggle("mode-web", mode === "web");
   document.body.classList.toggle("mode-payload", mode === "payload");
+  document.body.classList.toggle("mode-tools", mode === "tools");
   render();
   document.getElementById("main").scrollTop = 0;
   try { window.scrollTo(0, 0); } catch(e){}
@@ -383,6 +416,7 @@ function syncModeUI() {
       coverage: "",
       web: "ターゲット・脆弱性・URLを検索…",
       payload: "ペイロード・タイプ・用途を検索…",
+      tools: "ツール・コマンドを検索…",
       cheatsheet: "コマンド・フィールド・コードを検索…"
     };
     si.placeholder = ph[appMode] ?? ph.cheatsheet;
@@ -650,6 +684,7 @@ function bindGlobalUI() {
     if (appMode === "coverage"){ searchMode = false; return; }
     if (appMode === "web")     { renderWebSearch(); return; }
     if (appMode === "payload") { renderPayloadSearch(); return; }
+    if (appMode === "tools")   { renderToolsSearch(); return; }
     renderNav(); renderSearch();
   });
   document.getElementById("searchClear").onclick = () => { clearSearchInput(); searchMode=false; render(); si.focus(); };
@@ -661,6 +696,7 @@ function bindGlobalUI() {
     else if (appMode === "coverage") { render(); }
     else if (appMode === "web") { webView="targets"; webTargetId=null; searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "payload") { searchMode=false; clearSearchInput(); render(); }
+    else if (appMode === "tools") { toolsView="list"; toolId=null; searchMode=false; clearSearchInput(); render(); }
     else goHome();
   };
   document.getElementById("brandHome").onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); document.getElementById("brandHome").onclick(); } };
