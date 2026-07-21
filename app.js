@@ -11,8 +11,8 @@
 ════════════════════════════════════════════════════════ */
 
 /* ── STATE ─────────────────────────────────────────── */
-let data       = { tabs: [], machines: [], phases: [], hunts: [], queries: [] };
-let appMode    = "cheatsheet";  // "cheatsheet" | "logbook" | "hunt" | "query" | "coverage"
+let data       = { tabs: [], machines: [], phases: [], hunts: [], queries: [], targets: [], payloads: [], vulnTypes: [] };
+let appMode    = "cheatsheet";  // "cheatsheet" | "logbook" | "hunt" | "query" | "coverage" | "web" | "payload"
 let activeId   = null;          // current sheet (tab) id
 let activeCat  = null;          // current category
 let view       = "home";        // home | cat | tab | search
@@ -36,6 +36,14 @@ let huntFilter   = "all";       // ハント一覧のフィルタ
 let queryFilter  = "all";       // クエリ一覧の言語/Techフィルタ
 let queryLangFilter = null;     // クエリ言語フィルタ
 let queryTechFilter = null;     // Technique フィルタ
+
+/* web (OSWA) state */
+let webView       = "targets";  // targets | target
+let webTargetId   = null;       // 開いているターゲット
+let webVtFilter   = null;       // ターゲット詳細の脆弱性タイプ絞り込み
+let webFilter     = "all";      // ターゲット一覧のフィルタ
+let payloadVtFilter = null;     // ペイロード一覧の脆弱性タイプ絞り込み
+let webInputVt    = null;       // ワンライン入力の選択中タイプ
 
 /* category presentation metadata (order + icon + description) */
 const CAT_META = {
@@ -80,6 +88,30 @@ const HUNT_STATUS = {
   clear:    { label: "未検知",     color: "#3fd07f", cls: "clear" },
   followup: { label: "要追加調査", color: "#5aa9e0", cls: "followup" },
 };
+
+/* web (OSWA) constants */
+const DEFAULT_VULN_TYPES = [
+  { id: "xss",   label: "XSS",                    color: "#e08a4d" },
+  { id: "sqli",  label: "SQLi",                   color: "#e05c5c" },
+  { id: "ssrf",  label: "SSRF",                   color: "#5aa9e0" },
+  { id: "lfi",   label: "LFI / Path Traversal",   color: "#b085e0" },
+  { id: "rce",   label: "RCE / Command Injection",color: "#e06a9c" },
+  { id: "ssti",  label: "SSTI",                   color: "#45c8b0" },
+  { id: "xxe",   label: "XXE",                    color: "#e0a944" },
+  { id: "idor",  label: "IDOR",                   color: "#3fd07f" },
+  { id: "auth",  label: "認証バイパス",            color: "#7d9186" },
+  { id: "upload",label: "ファイルアップロード",     color: "#c9a15a" },
+];
+const WEB_STATUS = {
+  todo:      { label: "未着手",   color: "#7d9186", cls: "todo" },
+  probing:   { label: "調査中",   color: "#5aa9e0", cls: "probing" },
+  exploited: { label: "exploited",color: "#e0a944", cls: "exploited" },
+  proof:     { label: "proof取得", color: "#3fd07f", cls: "proof" },
+};
+const WEB_VERDICTS = [
+  { id: "confirmed", label: "confirmed", color: "#3fd07f" },
+  { id: "testing",   label: "testing",   color: "#e0a944" },
+];
 
 (async function init() {
   // theme
@@ -220,6 +252,50 @@ function normalizeData() {
     q.reference = q.reference || "";
     q.ts = q.ts || Date.now();
   });
+
+  // ── Web / OSWA（新規・後方互換） ──
+  if (!Array.isArray(data.vulnTypes) || !data.vulnTypes.length) {
+    data.vulnTypes = JSON.parse(JSON.stringify(DEFAULT_VULN_TYPES));
+  }
+  data.vulnTypes.forEach(v => { v.id = v.id || uid(); v.color = v.color || "#7d9186"; v.label = v.label || v.id; });
+
+  if (!Array.isArray(data.targets)) data.targets = [];
+  data.targets.forEach(t => {
+    t.id = t.id || uid();
+    t.name = t.name || "無名ターゲット";
+    t.url = t.url || "";
+    t.techStack = Array.isArray(t.techStack) ? t.techStack : [];
+    t.status = t.status || "todo";        // todo|probing|exploited|proof
+    t.category = t.category || "OSWA試験";  // OSWA試験 / 練習 など
+    t.localTxt = t.localTxt || "";
+    t.proofTxt = t.proofTxt || "";
+    t.notes = t.notes || "";
+    t.findings = Array.isArray(t.findings) ? t.findings : [];
+    t.findings.forEach(f => {
+      f.id = f.id || uid();
+      f.vulnType = f.vulnType || "";       // vulnTypes の id
+      f.endpoint = f.endpoint || "";
+      f.request = f.request || "";         // 生HTTPリクエスト
+      f.payload = f.payload || "";
+      f.note = f.note || "";
+      f.steps = Array.isArray(f.steps) ? f.steps : [];
+      f.impact = f.impact || "";
+      f.verdict = f.verdict || "testing";  // confirmed|testing
+      f.ts = f.ts || Date.now();
+    });
+  });
+
+  if (!Array.isArray(data.payloads)) data.payloads = [];
+  data.payloads.forEach(p => {
+    p.id = p.id || uid();
+    p.title = p.title || "無題のペイロード";
+    p.vulnType = p.vulnType || "";
+    p.body = p.body || "";
+    p.context = p.context || "";
+    p.bypass = p.bypass || "";
+    p.reference = p.reference || "";
+    p.ts = p.ts || Date.now();
+  });
 }
 
 /* categories present in data, ordered */
@@ -269,6 +345,8 @@ function render() {
   if (appMode === "hunt")    { renderHunt(); return; }
   if (appMode === "query")   { renderQueryLib(); return; }
   if (appMode === "coverage"){ renderCoverage(); return; }
+  if (appMode === "web")     { renderWeb(); return; }
+  if (appMode === "payload") { renderPayloadLib(); return; }
   renderNav();
   if (searchMode)       renderSearch();
   else if (view === "home") renderHome();
@@ -286,6 +364,8 @@ function setMode(mode) {
   document.body.classList.toggle("mode-hunt", mode === "hunt");
   document.body.classList.toggle("mode-query", mode === "query");
   document.body.classList.toggle("mode-coverage", mode === "coverage");
+  document.body.classList.toggle("mode-web", mode === "web");
+  document.body.classList.toggle("mode-payload", mode === "payload");
   render();
   document.getElementById("main").scrollTop = 0;
   try { window.scrollTo(0, 0); } catch(e){}
@@ -301,6 +381,8 @@ function syncModeUI() {
       hunt: "ハント・仮説・Technique を検索…",
       query: "クエリ・Technique・データソースを検索…",
       coverage: "",
+      web: "ターゲット・脆弱性・URLを検索…",
+      payload: "ペイロード・タイプ・用途を検索…",
       cheatsheet: "コマンド・フィールド・コードを検索…"
     };
     si.placeholder = ph[appMode] ?? ph.cheatsheet;
@@ -566,6 +648,8 @@ function bindGlobalUI() {
     if (appMode === "hunt")    { renderHuntSearch(); return; }
     if (appMode === "query")   { renderQuerySearch(); return; }
     if (appMode === "coverage"){ searchMode = false; return; }
+    if (appMode === "web")     { renderWebSearch(); return; }
+    if (appMode === "payload") { renderPayloadSearch(); return; }
     renderNav(); renderSearch();
   });
   document.getElementById("searchClear").onclick = () => { clearSearchInput(); searchMode=false; render(); si.focus(); };
@@ -575,6 +659,8 @@ function bindGlobalUI() {
     else if (appMode === "hunt") { huntView="list"; huntId=null; searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "query") { searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "coverage") { render(); }
+    else if (appMode === "web") { webView="targets"; webTargetId=null; searchMode=false; clearSearchInput(); render(); }
+    else if (appMode === "payload") { searchMode=false; clearSearchInput(); render(); }
     else goHome();
   };
   document.getElementById("brandHome").onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); document.getElementById("brandHome").onclick(); } };
