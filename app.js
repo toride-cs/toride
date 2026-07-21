@@ -11,8 +11,8 @@
 ════════════════════════════════════════════════════════ */
 
 /* ── STATE ─────────────────────────────────────────── */
-let data       = { tabs: [], machines: [], phases: [] };
-let appMode    = "cheatsheet";  // "cheatsheet" | "logbook"
+let data       = { tabs: [], machines: [], phases: [], hunts: [], queries: [] };
+let appMode    = "cheatsheet";  // "cheatsheet" | "logbook" | "hunt" | "query" | "coverage"
 let activeId   = null;          // current sheet (tab) id
 let activeCat  = null;          // current category
 let view       = "home";        // home | cat | tab | search
@@ -27,6 +27,15 @@ let lbMachineId  = null;        // 開いているマシン
 let lbAttemptId  = null;        // 開いている試行
 let lbPhaseFilter= null;        // フェーズ絞り込み (null=すべて)
 let lbFilter     = "all";       // machines一覧のフィルタ
+
+/* threat-hunting state */
+let huntView     = "list";      // list | hunt
+let huntId       = null;        // 開いているハント
+let huntStageFilter = null;     // 所見フィルタ (null=すべて)
+let huntFilter   = "all";       // ハント一覧のフィルタ
+let queryFilter  = "all";       // クエリ一覧の言語/Techフィルタ
+let queryLangFilter = null;     // クエリ言語フィルタ
+let queryTechFilter = null;     // Technique フィルタ
 
 /* category presentation metadata (order + icon + description) */
 const CAT_META = {
@@ -50,6 +59,27 @@ const DEFAULT_PHASES = [
   { id: "privesc",  label: "privesc",  color: "#e05c5c" },
   { id: "loot",     label: "loot",     color: "#3fd07f" },
 ];
+
+/* threat-hunting constants */
+const HUNT_STAGES = [
+  { id: "prepare", label: "Prepare", jp: "準備" },
+  { id: "execute", label: "Execute", jp: "実行" },
+  { id: "act",     label: "Act",     jp: "対応" },
+];
+const QUERY_LANGS = ["KQL", "ES|QL", "SPL", "Sigma", "YARA", "VQL"];
+const HUNT_VERDICTS = [
+  { id: "malicious",    label: "malicious",    color: "#e05c5c" },
+  { id: "suspicious",   label: "suspicious",   color: "#e0a944" },
+  { id: "benign",       label: "benign",       color: "#3fd07f" },
+  { id: "inconclusive", label: "inconclusive", color: "#7d9186" },
+];
+const HUNT_STATUS = {
+  plan:     { label: "計画",       color: "#7d9186", cls: "plan" },
+  running:  { label: "進行中",     color: "#e0a944", cls: "running" },
+  detected: { label: "検知あり",   color: "#e05c5c", cls: "detected" },
+  clear:    { label: "未検知",     color: "#3fd07f", cls: "clear" },
+  followup: { label: "要追加調査", color: "#5aa9e0", cls: "followup" },
+};
 
 (async function init() {
   // theme
@@ -151,6 +181,45 @@ function normalizeData() {
       });
     });
   });
+
+  // ── スレットハンティング（新規・後方互換） ──
+  if (!Array.isArray(data.hunts)) data.hunts = [];
+  data.hunts.forEach(h => {
+    h.id = h.id || uid();
+    h.title = h.title || "無題のハント";
+    h.hypothesis = h.hypothesis || "";
+    h.techniques = Array.isArray(h.techniques) ? h.techniques : [];
+    h.dataSources = Array.isArray(h.dataSources) ? h.dataSources : [];
+    h.environment = h.environment || "";      // 実務 / ラボ
+    h.status = h.status || "plan";            // plan|running|detected|clear|followup
+    h.stage = h.stage || "prepare";           // prepare|execute|act
+    h.conclusion = h.conclusion || "";
+    h.followup = h.followup || "";
+    h.started_at = h.started_at || Date.now();
+    h.steps = Array.isArray(h.steps) ? h.steps : [];
+    h.steps.forEach(s => {
+      s.id = s.id || uid();
+      s.query = s.query || "";
+      s.lang = s.lang || "KQL";
+      s.finding = s.finding || "";
+      s.verdict = s.verdict || "inconclusive"; // malicious|suspicious|benign|inconclusive
+      s.ts = s.ts || Date.now();
+    });
+  });
+
+  if (!Array.isArray(data.queries)) data.queries = [];
+  data.queries.forEach(q => {
+    q.id = q.id || uid();
+    q.title = q.title || "無題のクエリ";
+    q.lang = q.lang || "KQL";                 // KQL|ES|QL|SPL|Sigma|YARA
+    q.body = q.body || "";
+    q.techniques = Array.isArray(q.techniques) ? q.techniques : [];
+    q.dataSource = q.dataSource || "";
+    q.platform = q.platform || "";
+    q.falsePositives = q.falsePositives || "";
+    q.reference = q.reference || "";
+    q.ts = q.ts || Date.now();
+  });
 }
 
 /* categories present in data, ordered */
@@ -197,6 +266,9 @@ function gotoTab(id) { closeSidebar(); switchTab(id); }
 function render() {
   syncModeUI();
   if (appMode === "logbook") { renderLogbook(); return; }
+  if (appMode === "hunt")    { renderHunt(); return; }
+  if (appMode === "query")   { renderQueryLib(); return; }
+  if (appMode === "coverage"){ renderCoverage(); return; }
   renderNav();
   if (searchMode)       renderSearch();
   else if (view === "home") renderHome();
@@ -211,6 +283,9 @@ function setMode(mode) {
   searchMode = false;
   clearSearchInput();
   document.body.classList.toggle("mode-logbook", mode === "logbook");
+  document.body.classList.toggle("mode-hunt", mode === "hunt");
+  document.body.classList.toggle("mode-query", mode === "query");
+  document.body.classList.toggle("mode-coverage", mode === "coverage");
   render();
   document.getElementById("main").scrollTop = 0;
   try { window.scrollTo(0, 0); } catch(e){}
@@ -219,11 +294,17 @@ function syncModeUI() {
   document.querySelectorAll("[data-mode]").forEach(btn => {
     btn.classList.toggle("on", btn.dataset.mode === appMode);
   });
-  // 検索プレースホルダをモードに合わせる
   const si = document.getElementById("searchInput");
-  if (si) si.placeholder = appMode === "logbook"
-    ? "マシン・コマンド・技を検索…"
-    : "コマンド・フィールド・コードを検索…";
+  if (si) {
+    const ph = {
+      logbook: "マシン・コマンド・技を検索…",
+      hunt: "ハント・仮説・Technique を検索…",
+      query: "クエリ・Technique・データソースを検索…",
+      coverage: "",
+      cheatsheet: "コマンド・フィールド・コードを検索…"
+    };
+    si.placeholder = ph[appMode] ?? ph.cheatsheet;
+  }
 }
 
 /* ── SIDEBAR NAV ── */
@@ -482,11 +563,20 @@ function bindGlobalUI() {
     if (!q) { searchMode = false; render(); return; }
     searchMode = true;
     if (appMode === "logbook") { renderLbSearch(); return; }
+    if (appMode === "hunt")    { renderHuntSearch(); return; }
+    if (appMode === "query")   { renderQuerySearch(); return; }
+    if (appMode === "coverage"){ searchMode = false; return; }
     renderNav(); renderSearch();
   });
   document.getElementById("searchClear").onclick = () => { clearSearchInput(); searchMode=false; render(); si.focus(); };
 
-  document.getElementById("brandHome").onclick = () => { if (appMode === "logbook") { lbView="machines"; lbMachineId=null; searchMode=false; clearSearchInput(); render(); } else goHome(); };
+  document.getElementById("brandHome").onclick = () => {
+    if (appMode === "logbook") { lbView="machines"; lbMachineId=null; searchMode=false; clearSearchInput(); render(); }
+    else if (appMode === "hunt") { huntView="list"; huntId=null; searchMode=false; clearSearchInput(); render(); }
+    else if (appMode === "query") { searchMode=false; clearSearchInput(); render(); }
+    else if (appMode === "coverage") { render(); }
+    else goHome();
+  };
   document.getElementById("brandHome").onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); document.getElementById("brandHome").onclick(); } };
 
   document.getElementById("themeToggle").onclick = toggleTheme;
@@ -1032,14 +1122,51 @@ function closeSidebar() { document.getElementById("sidebar").classList.remove("o
 /* ═══════════════════════════════════════════════════
    MODAL
 ════════════════════════════════════════════════════ */
-function openModal(title, bodyHTML, cb) {
+function openModal(title, bodyHTML, cb, opts) {
   document.getElementById("modalTitle").textContent = title;
   document.getElementById("modalBody").innerHTML = bodyHTML;
   document.getElementById("modalOverlay").classList.add("open");
   modalCb = cb;
+
+  // アクションボタンをオプションに応じて組み立てる
+  const actions = document.querySelector(".modal-actions");
+  if (actions) {
+    opts = opts || {};
+    const okText = opts.okText || "OK";
+    const showOk = cb || opts.onOk;   // OKハンドラがある時だけOKボタンを出す
+    let html = `<button class="btn btn-text" onclick="closeModal()">キャンセル</button>`;
+    // 追加ボタン（編集・削除など）
+    (opts.extraBtns || []).forEach((b, i) => {
+      window.__modalExtra = window.__modalExtra || {};
+      window.__modalExtra[i] = b.fn;
+      html += `<button class="btn ${b.cls||'btn-text'}" onclick="window.__modalExtra[${i}]()">${esc(b.label)}</button>`;
+    });
+    if (showOk) {
+      if (opts.onOk) { window.__modalOnOk = opts.onOk; html += `<button class="btn btn-filled" onclick="window.__modalOnOk()">${esc(okText)}</button>`; }
+      else html += `<button class="btn btn-filled" onclick="confirmModal()">${esc(okText)}</button>`;
+    }
+    actions.innerHTML = html;
+  }
+
   setTimeout(() => document.querySelector("#modalBody input:not([type=radio]):not([type=file]),#modalBody textarea,#modalBody select")?.focus(), 50);
 }
-function closeModal() { document.getElementById("modalOverlay").classList.remove("open"); modalCb = null; }
+
+/* HTMLは環境非依存でコピー（Clipboard API + フォールバック） */
+function copyToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).catch(() => legacyCopy(text));
+  } else {
+    legacyCopy(text);
+  }
+}
+function closeModal() {
+  document.getElementById("modalOverlay").classList.remove("open");
+  modalCb = null;
+  window.__modalOnOk = null; window.__modalExtra = null;
+  // アクションボタンを標準（キャンセル/OK）に戻す
+  const actions = document.querySelector(".modal-actions");
+  if (actions) actions.innerHTML = `<button class="btn btn-text" onclick="closeModal()">キャンセル</button><button class="btn btn-filled" onclick="confirmModal()">OK</button>`;
+}
 function confirmModal() { modalCb?.(); closeModal(); }
 document.getElementById("modalOverlay").addEventListener("click", e => { if (e.target === e.currentTarget) closeModal(); });
 
@@ -1058,7 +1185,11 @@ document.addEventListener("keydown", e => {
     closeSidebar();
   }
   if (e.key === "Enter" && modalOpen) {
-    if (document.activeElement.tagName !== "TEXTAREA" && document.activeElement.type !== "file") { e.preventDefault(); confirmModal(); }
+    if (document.activeElement.tagName !== "TEXTAREA" && document.activeElement.type !== "file") {
+      e.preventDefault();
+      if (window.__modalOnOk) window.__modalOnOk();
+      else confirmModal();
+    }
   }
   if (e.key.toLowerCase() === "e" && !typing && !modalOpen) { toggleEdit(); }
 });
