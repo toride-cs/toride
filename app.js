@@ -52,7 +52,8 @@ let toolCertFilter = "all";     // 資格タブ（メイン軸）
 let toolCatFilter = null;       // カテゴリ絞り込み
 
 /* knowledge state */
-let knowView      = "list";     // list (詳細ページは無し・リンクは直接開く)
+let knowView      = "list";     // list | detail
+let knowDetailId  = null;       // 詳細表示中のナレッジ
 let knowCertFilter = "all";
 let knowCatFilter = null;
 let knowKindFilter = null;
@@ -355,6 +356,7 @@ function normalizeData() {
     k.category = k.category || "reference";
     k.kind = k.kind || "doc";
     k.desc = k.desc || "";
+    k.detail = k.detail || null;   // { overview, keyPoints[], usage[{label,content}], oswaTips, lastCurated }
     k.ts = k.ts || Date.now();
   });
 }
@@ -731,7 +733,7 @@ function bindGlobalUI() {
     else if (appMode === "web") { webView="targets"; webTargetId=null; searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "payload") { searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "tools") { toolsView="list"; toolId=null; searchMode=false; clearSearchInput(); render(); }
-    else if (appMode === "knowledge") { searchMode=false; clearSearchInput(); render(); }
+    else if (appMode === "knowledge") { knowView="list"; knowDetailId=null; searchMode=false; clearSearchInput(); render(); }
     else goHome();
   };
   document.getElementById("brandHome").onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); document.getElementById("brandHome").onclick(); } };
