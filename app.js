@@ -356,6 +356,12 @@ function normalizeData() {
     k.category = k.category || "reference";
     k.kind = k.kind || "doc";
     k.desc = k.desc || "";
+    // detail が無い既存データには、タイトル一致で詳細を補完（data.json を作り直さずに反映）
+    if (!k.detail) {
+      const KD = (typeof window !== "undefined" && window.KNOWLEDGE_DETAILS) ||
+                 (typeof KNOWLEDGE_DETAILS !== "undefined" ? KNOWLEDGE_DETAILS : null);
+      if (KD && KD[k.title]) k.detail = KD[k.title];
+    }
     k.detail = k.detail || null;   // { overview, keyPoints[], usage[{label,content}], oswaTips, lastCurated }
     k.ts = k.ts || Date.now();
   });

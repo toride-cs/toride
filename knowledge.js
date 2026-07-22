@@ -8,6 +8,16 @@
 ════════════════════════════════════════════════════════ */
 
 function knowKindMeta(k){ return KNOW_KINDS[k] || KNOW_KINDS.doc; }
+
+/* 既存ナレッジ（detail無し）に、タイトル一致でKNOWLEDGE_DETAILSを補完 */
+function knowBackfillDetails() {
+  const KD = (typeof window !== "undefined" && window.KNOWLEDGE_DETAILS) ||
+             (typeof KNOWLEDGE_DETAILS !== "undefined" ? KNOWLEDGE_DETAILS : null);
+  if (!KD) return;
+  data.knowledge.forEach(k => {
+    if (!k.detail && KD[k.title]) k.detail = KD[k.title];
+  });
+}
 function knowAllCerts(){
   const s = new Set();
   data.knowledge.forEach(k => (k.certs||[]).forEach(c => s.add(c)));
@@ -34,6 +44,9 @@ function renderKnowNav() {
 ════════════════════════════════════════════════════ */
 function renderKnowledge() {
   knowledgeSeedIfEmpty();
+  knowBackfillDetails();  // 既存データにdetailが無ければタイトル一致で補完
+  if (knowView === "detail" && data.knowledge.find(k=>k.id===knowDetailId)) { renderKnowDetail(); return; }
+  knowView = "list";
   renderKnowNav();
   const main = document.getElementById("main");
 
@@ -85,18 +98,24 @@ function renderKnowledge() {
 function renderKnowCard(k) {
   const m = knowKindMeta(k.kind);
   const certs = (k.certs||[]).map(c=>`<span class="tool-cert-mini">${esc(c)}</span>`).join("");
+  const hasDetail = !!k.detail;
   return `
     <div class="know-card">
       <div class="know-card-top">
         <span class="know-kind" style="background:${m.color}22;color:${m.color}">${esc(m.label)}</span>
+        ${hasDetail?`<span class="know-hasdetail" title="アプリ内に整理情報あり"><span class="material-symbols-rounded" style="font-size:13px">article</span>まとめ</span>`:""}
         <button class="know-edit" onclick="kEditLink('${k.id}')" title="編集"><span class="material-symbols-rounded" style="font-size:15px">edit</span></button>
       </div>
-      <h3 class="know-title"><a href="${esc(k.url)}" target="_blank" rel="noopener">${esc(k.title)}<span class="material-symbols-rounded" style="font-size:14px;vertical-align:middle;margin-left:3px">open_in_new</span></a></h3>
+      <h3 class="know-title">${esc(k.title)}</h3>
       ${k.desc?`<div class="know-desc">${esc(k.desc)}</div>`:""}
       <div class="know-url">${esc(knowDomain(k.url))}</div>
       <div class="know-foot">
         <span class="tool-cat-tag">${esc(k.category)}</span>
         ${certs}
+        <span class="know-actions">
+          ${hasDetail?`<button class="know-detail-btn" onclick="kOpenDetail('${k.id}')"><span class="material-symbols-rounded" style="font-size:14px">menu_book</span>まとめを見る</button>`:""}
+          <a class="know-open-btn" href="${esc(k.url)}" target="_blank" rel="noopener"><span class="material-symbols-rounded" style="font-size:14px">open_in_new</span>開く</a>
+        </span>
       </div>
     </div>`;
 }
@@ -161,6 +180,7 @@ function kDelLink(id) {
 
 /* 検索 */
 function renderKnowledgeSearch() {
+  knowBackfillDetails();
   const main = document.getElementById("main");
   const q = document.getElementById("searchInput").value.trim().toLowerCase();
   if (!q) { searchMode=false; render(); return; }
@@ -175,6 +195,58 @@ function renderKnowledgeSearch() {
     <div class="s-head"><h1>検索: ${esc(q)}</h1><span class="th-count">${hits.length} 件</span></div>
     ${hits.length ? `<div class="know-grid">${hits.map(renderKnowCard).join("")}</div>`
       : emptyState("search_off","一致するナレッジがありません","別のキーワードをお試しください")}
+  `;
+}
+
+/* ═══════════════════════════════════════════════════
+   詳細画面（アプリ内でまとめを読む）
+════════════════════════════════════════════════════ */
+function kOpenDetail(id){ knowDetailId=id; knowView="detail"; render(); document.getElementById("main").scrollTop=0; }
+function kBackList(){ knowView="list"; knowDetailId=null; renderKnowledge(); }
+
+function renderKnowDetail() {
+  renderKnowNav();
+  const main = document.getElementById("main");
+  const k = data.knowledge.find(x=>x.id===knowDetailId);
+  if (!k || !k.detail) { kBackList(); return; }
+  const d = k.detail;
+  const m = knowKindMeta(k.kind);
+  const certs = (k.certs||[]).map(c=>`<span class="tool-cert-mini">${esc(c)}</span>`).join("");
+
+  const keyPoints = (d.keyPoints||[]).length
+    ? `<div class="know-d-sec"><h4>要点</h4><ul class="know-d-list">${d.keyPoints.map(p=>`<li>${esc(p)}</li>`).join("")}</ul></div>` : "";
+
+  const usage = (d.usage||[]).length
+    ? `<div class="know-d-sec"><h4>使い方・コマンド</h4>${d.usage.map(u=>`
+        <div class="know-d-usage">
+          <div class="know-d-usage-label">${esc(u.label)}</div>
+          <pre class="know-d-code">${esc(u.content)}<button class="tool-cmd-copy" onclick="event.stopPropagation();copyCell(event, ${escAttr(JSON.stringify(u.content))})" title="コピー"><span class="material-symbols-rounded" style="font-size:14px">content_copy</span></button></pre>
+        </div>`).join("")}</div>` : "";
+
+  const oswaTips = d.oswaTips
+    ? `<div class="know-d-sec"><h4>OSWAでの使いどころ</h4><div class="know-d-tips">${esc(d.oswaTips)}</div></div>` : "";
+
+  main.innerHTML = `
+    <div class="know-detail">
+      <div class="th-crumb"><button onclick="kBackList()">ナレッジ</button> / <b>${esc(k.title)}</b></div>
+      <div class="know-d-head">
+        <span class="know-kind" style="background:${m.color}22;color:${m.color}">${esc(m.label)}</span>
+        <h1>${esc(k.title)}</h1>
+      </div>
+      <div class="know-d-meta">
+        <span class="tool-cat-tag">${esc(k.category)}</span>${certs}
+        <a class="know-open-btn" href="${esc(k.url)}" target="_blank" rel="noopener" style="margin-left:auto"><span class="material-symbols-rounded" style="font-size:14px">open_in_new</span>元サイトを開く</a>
+      </div>
+
+      ${d.overview?`<div class="know-d-overview">${esc(d.overview)}</div>`:""}
+      ${keyPoints}
+      ${usage}
+      ${oswaTips}
+
+      <div class="know-d-foot">
+        <span class="know-d-curated">${d.lastCurated?`整理日: ${esc(d.lastCurated)}（アプリ内にまとめた情報です。最新は元サイトを確認）`:"アプリ内にまとめた情報です"}</span>
+      </div>
+    </div>
   `;
 }
 
@@ -222,5 +294,8 @@ function knowledgeSeedIfEmpty() {
       certs: ["OSWA"], category: "recon", kind: "tool",
       desc: "OSWA向けの自動偵察ツール。" },
   ];
-  seed.forEach(s => data.knowledge.push({ id: uid(), ts: Date.now(), ...s }));
+  seed.forEach(s => {
+    const detail = (typeof KNOWLEDGE_DETAILS !== "undefined" && KNOWLEDGE_DETAILS[s.title]) || null;
+    data.knowledge.push({ id: uid(), ts: Date.now(), detail, ...s });
+  });
 }
