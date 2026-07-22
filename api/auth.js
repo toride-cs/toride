@@ -17,6 +17,7 @@ const ALLOWED_FILES = {
   '/web.js':     'web.js',
   '/tools.js':   'tools.js',
   '/knowledge.js': 'knowledge.js',
+  '/knowledge_data.js': 'knowledge_data.js',
   '/data.json':  'data.json',
 };
 
