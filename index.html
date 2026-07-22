@@ -1233,6 +1233,29 @@ body.edit #editBanner { display: flex; }
 .know-paste-zone { background: var(--md-surface-1); border: 1px solid var(--md-outline-var); border-radius: 8px; padding: 12px; margin-bottom: 8px; }
 .know-paste-apply { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--md-on-primary); background: var(--md-primary); border-radius: 6px; padding: 7px 14px; margin-top: 6px; }
 .know-paste-divider { text-align: center; font-family: var(--font-mono); font-size: 11px; color: var(--md-on-surface-var); margin: 14px 0 10px; position: relative; }
+
+/* dashboards */
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px,1fr)); gap: 16px; }
+.dash-card { background: var(--md-surface); border: 1px solid var(--md-outline-var); border-radius: var(--radius-lg); padding: 18px; display: flex; flex-direction: column; gap: 9px; transition: box-shadow .15s, transform .15s; }
+.dash-card:hover { box-shadow: var(--shadow-2); transform: translateY(-2px); }
+.dash-card-top { display: flex; align-items: center; gap: 8px; }
+.dash-plat { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .4px; padding: 2px 9px; border-radius: 4px; }
+.dash-fmt { font-family: var(--font-mono); font-size: 10px; color: var(--md-on-surface-var); background: var(--md-surface-1); border: 1px solid var(--md-outline-var); border-radius: 4px; padding: 2px 7px; }
+.dash-size { font-family: var(--font-mono); font-size: 11px; color: var(--md-on-surface-var); margin-left: auto; }
+.dash-name { font-size: 16px; font-weight: 700; line-height: 1.4; }
+.dash-desc { font-size: 13px; color: var(--md-on-surface-var); line-height: 1.5; }
+.dash-meta-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.dash-meta-chip { font-family: var(--font-mono); font-size: 10px; color: var(--md-primary); background: var(--md-secondary-container); border-radius: 4px; padding: 2px 7px; }
+.dash-card-foot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--md-outline-var); }
+.dash-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.dash-preview-btn, .dash-edit-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: 11px; color: var(--md-on-surface-var); border: 1px solid var(--md-outline-var); border-radius: 6px; padding: 5px 9px; background: var(--md-surface); }
+.dash-preview-btn:hover, .dash-edit-btn:hover { color: var(--md-primary); border-color: var(--md-primary); }
+.dash-dl-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--md-on-primary); background: var(--md-primary); border-radius: 6px; padding: 5px 11px; }
+.dash-dl-btn:hover { filter: brightness(1.05); box-shadow: var(--shadow-1); }
+.dash-fileinfo { font-family: var(--font-mono); font-size: 11px; color: var(--md-on-surface-var); margin: 4px 0; display: flex; align-items: center; gap: 5px; }
+.dash-title-list { max-height: 180px; overflow-y: auto; border: 1px solid var(--md-outline-var); border-radius: 8px; background: var(--md-surface-1); }
+.dash-title-item { font-size: 12px; padding: 6px 12px; border-bottom: 1px solid var(--md-outline-var); }
+.dash-title-item:last-child { border-bottom: none; }
 </style>
 </head>
 <body>
@@ -1259,6 +1282,7 @@ body.edit #editBanner { display: flex; }
       <button data-mode="hunt" title="ハント"><span class="material-symbols-rounded">travel_explore</span><span class="mode-label">ハント</span></button>
       <button data-mode="query" title="検知クエリ集"><span class="material-symbols-rounded">manage_search</span><span class="mode-label">クエリ集</span></button>
       <button data-mode="coverage" title="ATT&CKカバレッジ"><span class="material-symbols-rounded">map</span><span class="mode-label">カバレッジ</span></button>
+      <button data-mode="dashboards" title="ダッシュボード保管"><span class="material-symbols-rounded">dashboard</span><span class="mode-label">ダッシュボード</span></button>
     </div>
     <div class="search-wrap">
       <div class="search-box">
@@ -1326,5 +1350,6 @@ body.edit #editBanner { display: flex; }
 <script src="tools.js"></script>
 <script src="knowledge_data.js"></script>
 <script src="knowledge.js"></script>
+<script src="dashboards.js"></script>
 </body>
 </html>

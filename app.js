@@ -11,8 +11,8 @@
 ════════════════════════════════════════════════════════ */
 
 /* ── STATE ─────────────────────────────────────────── */
-let data       = { tabs: [], machines: [], phases: [], hunts: [], queries: [], targets: [], payloads: [], vulnTypes: [], tools: [], knowledge: [] };
-let appMode    = "cheatsheet";  // ... | "tools" | "knowledge"
+let data       = { tabs: [], machines: [], phases: [], hunts: [], queries: [], targets: [], payloads: [], vulnTypes: [], tools: [], knowledge: [], dashboards: [] };
+let appMode    = "cheatsheet";  // ... | "knowledge" | "dashboards"
 let activeId   = null;          // current sheet (tab) id
 let activeCat  = null;          // current category
 let view       = "home";        // home | cat | tab | search
@@ -57,6 +57,13 @@ let knowDetailId  = null;       // 詳細表示中のナレッジ
 let knowCertFilter = "all";
 let knowCatFilter = null;
 let knowKindFilter = null;
+
+/* dashboards state */
+let dashPlatFilter = "all";     // all | kibana | splunk
+const DASH_PLATFORMS = {
+  kibana: { label: "Kibana", color: "#00bfb3", ext: "ndjson", accept: ".ndjson,.json" },
+  splunk: { label: "Splunk", color: "#f8be34", ext: "xml",    accept: ".xml,.json,.tar.gz" },
+};
 
 /* category presentation metadata (order + icon + description) */
 const CAT_META = {
@@ -365,6 +372,21 @@ function normalizeData() {
     k.detail = k.detail || null;   // { overview, keyPoints[], usage[{label,content}], oswaTips, lastCurated }
     k.ts = k.ts || Date.now();
   });
+
+  // ── ダッシュボード保管（新規・後方互換） ──
+  if (!Array.isArray(data.dashboards)) data.dashboards = [];
+  data.dashboards.forEach(db => {
+    db.id = db.id || uid();
+    db.name = db.name || "無名ダッシュボード";
+    db.platform = db.platform || "kibana";   // kibana | splunk
+    db.format = db.format || "ndjson";
+    db.description = db.description || "";
+    db.certs = Array.isArray(db.certs) ? db.certs : [];
+    db.content = db.content || "";
+    db.size = db.size || (db.content ? db.content.length : 0);
+    db.meta = db.meta || null;               // { dashboards, searches, ... }
+    db.ts = db.ts || Date.now();
+  });
 }
 
 /* categories present in data, ordered */
@@ -418,6 +440,7 @@ function render() {
   if (appMode === "payload") { renderPayloadLib(); return; }
   if (appMode === "tools")   { renderTools(); return; }
   if (appMode === "knowledge") { renderKnowledge(); return; }
+  if (appMode === "dashboards") { renderDashboards(); return; }
   renderNav();
   if (searchMode)       renderSearch();
   else if (view === "home") renderHome();
@@ -439,6 +462,7 @@ function setMode(mode) {
   document.body.classList.toggle("mode-payload", mode === "payload");
   document.body.classList.toggle("mode-tools", mode === "tools");
   document.body.classList.toggle("mode-knowledge", mode === "knowledge");
+  document.body.classList.toggle("mode-dashboards", mode === "dashboards");
   render();
   document.getElementById("main").scrollTop = 0;
   try { window.scrollTo(0, 0); } catch(e){}
@@ -458,6 +482,7 @@ function syncModeUI() {
       payload: "ペイロード・タイプ・用途を検索…",
       tools: "ツール・コマンドを検索…",
       knowledge: "ナレッジ・URL・タグを検索…",
+      dashboards: "ダッシュボードを検索…",
       cheatsheet: "コマンド・フィールド・コードを検索…"
     };
     si.placeholder = ph[appMode] ?? ph.cheatsheet;
@@ -727,6 +752,7 @@ function bindGlobalUI() {
     if (appMode === "payload") { renderPayloadSearch(); return; }
     if (appMode === "tools")   { renderToolsSearch(); return; }
     if (appMode === "knowledge") { renderKnowledgeSearch(); return; }
+    if (appMode === "dashboards") { renderDashboardsSearch(); return; }
     renderNav(); renderSearch();
   });
   document.getElementById("searchClear").onclick = () => { clearSearchInput(); searchMode=false; render(); si.focus(); };
@@ -740,6 +766,7 @@ function bindGlobalUI() {
     else if (appMode === "payload") { searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "tools") { toolsView="list"; toolId=null; searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "knowledge") { knowView="list"; knowDetailId=null; searchMode=false; clearSearchInput(); render(); }
+    else if (appMode === "dashboards") { searchMode=false; clearSearchInput(); render(); }
     else goHome();
   };
   document.getElementById("brandHome").onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); document.getElementById("brandHome").onclick(); } };
