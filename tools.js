@@ -122,7 +122,13 @@ function renderToolDetail() {
 
   const cmds = (t.commands||[]).map((c,i) => `
     <div class="tool-cmd-block">
-      <div class="tool-cmd-label">${esc(c.label)||`コマンド ${i+1}`}</div>
+      <div class="tool-cmd-label">
+        <span>${esc(c.label)||`コマンド ${i+1}`}</span>
+        <span class="tool-cmd-acts">
+          <button class="tool-cmd-act" onclick="tEditCommand('${t.id}','${c.id}')" title="編集"><span class="material-symbols-rounded" style="font-size:14px">edit</span></button>
+          <button class="tool-cmd-act danger" onclick="tDelCommand('${t.id}','${c.id}')" title="削除"><span class="material-symbols-rounded" style="font-size:14px">delete</span></button>
+        </span>
+      </div>
       <pre class="tool-cmd-box">${esc(c.cmd)}<button class="tool-cmd-copy" onclick="event.stopPropagation();copyCell(event, ${escAttr(JSON.stringify(c.cmd))})" title="コピー"><span class="material-symbols-rounded" style="font-size:14px">content_copy</span></button></pre>
       ${c.note?`<div class="tool-cmd-note">${esc(c.note)}</div>`:""}
     </div>`).join("") || `<div class="th-side-empty">コマンドは登録されていません</div>`;
@@ -238,6 +244,28 @@ function tAddCommand(id) {
       t.commands.push({ id:uid(), label:val("cLabel"), cmd:val("cCmd"), note:val("cNote") });
       renderToolDetail(); toast("✅ コマンドを追加しました");
     });
+}
+
+function tEditCommand(toolId, cmdId) {
+  const t = data.tools.find(x=>x.id===toolId); if (!t) return;
+  const c = (t.commands||[]).find(x=>x.id===cmdId); if (!c) return;
+  openModal("コマンドを編集",
+    `<label>ラベル</label><input id="cLabel" value="${esc(c.label)}">
+     <label>コマンド</label><textarea id="cCmd">${esc(c.cmd)}</textarea>
+     <label>補足（任意）</label><input id="cNote" value="${esc(c.note)}">`,
+    () => {
+      c.label=val("cLabel"); c.cmd=val("cCmd"); c.note=val("cNote");
+      renderToolDetail(); toast("✅ コマンドを更新しました");
+    },
+    { extraBtns: [{ label:"削除", cls:"btn-text btn-danger", fn:()=>{ closeModal(); tDelCommand(toolId, cmdId); } }] });
+}
+
+function tDelCommand(toolId, cmdId) {
+  const t = data.tools.find(x=>x.id===toolId); if (!t) return;
+  const c = (t.commands||[]).find(x=>x.id===cmdId); if (!c) return;
+  if (!confirm(`コマンド「${c.label||c.cmd.slice(0,20)}」を削除しますか？`)) return;
+  t.commands = t.commands.filter(x=>x.id!==cmdId);
+  renderToolDetail(); toast("🗑 削除しました");
 }
 
 /* 検索 */

@@ -59,7 +59,7 @@
   --font-sans: 'Inter','Noto Sans JP',system-ui,-apple-system,sans-serif;
   --font-mono: 'JetBrains Mono',ui-monospace,monospace;
 
-  --header-h: 68px;
+  --header-h: 104px;
   --ease: cubic-bezier(.2,0,0,1);
   --ease-emph: cubic-bezier(.3,0,0,1);
 }
@@ -130,8 +130,17 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .header-inner {
   max-width: 1400px; margin: 0 auto;
   display: flex; align-items: center; gap: var(--sp-4);
-  padding: var(--sp-3) var(--sp-5); min-height: var(--header-h);
+  padding: var(--sp-2) var(--sp-5); min-height: 54px;
 }
+/* 下段: モードスイッチ行（横スクロール可・折り返さない） */
+.mode-row {
+  max-width: 1400px; margin: 0 auto;
+  padding: 0 var(--sp-5) var(--sp-2);
+  overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: thin;
+}
+.mode-row::-webkit-scrollbar { height: 6px; }
+.mode-row::-webkit-scrollbar-thumb { background: var(--md-outline-var); border-radius: 3px; }
 .brand {
   display: flex; align-items: center; gap: var(--sp-3);
   font-weight: 700; font-size: 20px; letter-spacing: -.3px;
@@ -640,14 +649,14 @@ body.edit #editBanner { display: flex; }
    MODE SWITCH (header)
 ════════════════════════════════════════════════════ */
 .mode-switch {
-  display: flex; gap: 2px; flex-shrink: 0;
+  display: inline-flex; gap: 2px; flex-shrink: 0;
   background: var(--md-surface-container); border-radius: var(--radius-full);
   padding: 3px;
 }
 .mode-switch button {
   display: flex; align-items: center; gap: 6px;
-  font-size: 13px; font-weight: 600; color: var(--md-on-surface-var);
-  padding: 7px 14px; border-radius: var(--radius-full); transition: background .15s, color .15s;
+  font-size: 12.5px; font-weight: 600; color: var(--md-on-surface-var);
+  padding: 6px 12px; border-radius: var(--radius-full); transition: background .15s, color .15s;
   white-space: nowrap;
 }
 .mode-switch button .material-symbols-rounded { font-size: 18px; }
@@ -1174,7 +1183,11 @@ body.edit #editBanner { display: flex; }
 .tool-detail-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
 .tool-sec-h { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--md-primary); text-transform: uppercase; letter-spacing: .5px; margin: 24px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--md-outline-var); }
 .tool-cmd-block { margin-bottom: 14px; }
-.tool-cmd-label { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--md-on-surface); margin-bottom: 5px; }
+.tool-cmd-label { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--md-on-surface); margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tool-cmd-acts { display: flex; align-items: center; gap: 4px; }
+.tool-cmd-act { display: inline-grid; place-items: center; width: 26px; height: 26px; color: var(--md-on-surface-var); border: 1px solid var(--md-outline-var); border-radius: 5px; background: var(--md-surface); }
+.tool-cmd-act:hover { background: var(--md-surface-2); color: var(--md-primary); }
+.tool-cmd-act.danger:hover { color: var(--md-error); border-color: var(--md-error); }
 .tool-cmd-box { font-family: var(--font-mono); font-size: 12.5px; background: var(--code-block-bg); color: var(--code-block-fg); border: 1px solid var(--md-outline-var); border-radius: 8px; padding: 11px 40px 11px 14px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; position: relative; margin: 0; }
 .tool-cmd-copy { position: absolute; right: 8px; top: 8px; width: 26px; height: 26px; display: grid; place-items: center; color: var(--md-on-surface-var); border: 1px solid var(--md-outline-var); border-radius: 5px; background: var(--md-surface); }
 .tool-cmd-copy:hover { background: var(--md-surface-2); color: var(--md-primary); }
@@ -1270,20 +1283,6 @@ body.edit #editBanner { display: flex; }
       <span class="brand-logo"><span class="material-symbols-rounded">terminal</span></span>
       <span class="brand-text">go2 cheatsheet</span>
     </div>
-    <div class="mode-switch" id="modeSwitch">
-      <button data-mode="cheatsheet" class="on" title="チートシート"><span class="material-symbols-rounded">grid_view</span><span class="mode-label">チートシート</span></button>
-      <button data-mode="tools" title="ツール・リファレンス"><span class="material-symbols-rounded">build</span><span class="mode-label">ツール</span></button>
-      <button data-mode="knowledge" title="ナレッジ・リンク集"><span class="material-symbols-rounded">menu_book</span><span class="mode-label">ナレッジ</span></button>
-      <span class="mode-group-sep" title="攻撃"></span>
-      <button data-mode="logbook" title="攻撃ログブック"><span class="material-symbols-rounded">track_changes</span><span class="mode-label">攻撃ログ</span></button>
-      <button data-mode="web" title="Web攻略 (OSWA)"><span class="material-symbols-rounded">language</span><span class="mode-label">Web攻略</span></button>
-      <button data-mode="payload" title="ペイロード集"><span class="material-symbols-rounded">vaccines</span><span class="mode-label">ペイロード</span></button>
-      <span class="mode-group-sep" title="防御"></span>
-      <button data-mode="hunt" title="ハント"><span class="material-symbols-rounded">travel_explore</span><span class="mode-label">ハント</span></button>
-      <button data-mode="query" title="検知クエリ集"><span class="material-symbols-rounded">manage_search</span><span class="mode-label">クエリ集</span></button>
-      <button data-mode="coverage" title="ATT&CKカバレッジ"><span class="material-symbols-rounded">map</span><span class="mode-label">カバレッジ</span></button>
-      <button data-mode="dashboards" title="ダッシュボード保管"><span class="material-symbols-rounded">dashboard</span><span class="mode-label">ダッシュボード</span></button>
-    </div>
     <div class="search-wrap">
       <div class="search-box">
         <span class="material-symbols-rounded lead-icon">search</span>
@@ -1311,6 +1310,22 @@ body.edit #editBanner { display: flex; }
           <button onclick="exportHTML()"><span class="material-symbols-rounded">html</span>HTMLを書き出し</button>
         </div>
       </div>
+    </div>
+  </div>
+  <div class="mode-row">
+    <div class="mode-switch" id="modeSwitch">
+      <button data-mode="cheatsheet" class="on" title="チートシート"><span class="material-symbols-rounded">grid_view</span><span class="mode-label">チートシート</span></button>
+      <button data-mode="tools" title="ツール・リファレンス"><span class="material-symbols-rounded">build</span><span class="mode-label">ツール</span></button>
+      <button data-mode="knowledge" title="ナレッジ・リンク集"><span class="material-symbols-rounded">menu_book</span><span class="mode-label">ナレッジ</span></button>
+      <span class="mode-group-sep" title="攻撃"></span>
+      <button data-mode="logbook" title="攻撃ログブック"><span class="material-symbols-rounded">track_changes</span><span class="mode-label">攻撃ログ</span></button>
+      <button data-mode="web" title="Web攻略 (OSWA)"><span class="material-symbols-rounded">language</span><span class="mode-label">Web攻略</span></button>
+      <button data-mode="payload" title="ペイロード集"><span class="material-symbols-rounded">vaccines</span><span class="mode-label">ペイロード</span></button>
+      <span class="mode-group-sep" title="防御"></span>
+      <button data-mode="hunt" title="ハント"><span class="material-symbols-rounded">travel_explore</span><span class="mode-label">ハント</span></button>
+      <button data-mode="query" title="検知クエリ集"><span class="material-symbols-rounded">manage_search</span><span class="mode-label">クエリ集</span></button>
+      <button data-mode="coverage" title="ATT&CKカバレッジ"><span class="material-symbols-rounded">map</span><span class="mode-label">カバレッジ</span></button>
+      <button data-mode="dashboards" title="ダッシュボード保管"><span class="material-symbols-rounded">dashboard</span><span class="mode-label">ダッシュボード</span></button>
     </div>
   </div>
 </header>

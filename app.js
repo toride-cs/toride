@@ -487,6 +487,18 @@ function syncModeUI() {
     };
     si.placeholder = ph[appMode] ?? ph.cheatsheet;
   }
+  // 編集ボタンはチートシート専用機能。他モードでは隠す
+  const editBtn = document.getElementById("editToggle");
+  if (editBtn) {
+    const isSheet = appMode === "cheatsheet";
+    editBtn.style.display = isSheet ? "" : "none";
+    // チートシート以外に切り替えたら編集モードを解除
+    if (!isSheet && editMode) {
+      editMode = false;
+      document.body.classList.remove("edit");
+      editBtn.classList.remove("active");
+    }
+  }
 }
 
 /* ── SIDEBAR NAV ── */
