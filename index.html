@@ -146,16 +146,19 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   font-weight: 700; font-size: 20px; letter-spacing: -.3px;
   white-space: nowrap; flex-shrink: 0;
 }
-.brand-logo {
-  width: 36px; height: 36px; border-radius: 10px;
-  display: grid; place-items: center; color: #fff;
-  background: linear-gradient(135deg,#4285f4,#0b57d0);
-  box-shadow: var(--shadow-1);
+.brand-mark {
+  width: 40px; height: 36px; flex-shrink: 0;
+  color: var(--md-on-surface);   /* 六角形左側と>_ がテーマに追従 */
 }
-.brand-logo .material-symbols-rounded { font-size: 22px; }
-.brand-text { background: linear-gradient(120deg,#4285f4,#9334e6,#d93025);
-  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-@media (max-width: 640px){ .brand-text{ display:none; } }
+.brand-lockup { display: flex; flex-direction: column; gap: 1px; line-height: 1; }
+.brand-text { font-size: 20px; font-weight: 800; letter-spacing: -.3px; }
+.brand-go2 { color: #1a7dff; }
+.brand-cs { color: var(--md-on-surface); }   /* 黒文字部分＝テーマ追従 */
+.brand-sub {
+  font-family: var(--font-mono); font-size: 8.5px; font-weight: 600;
+  letter-spacing: .8px; color: var(--md-on-surface-var);
+}
+@media (max-width: 720px){ .brand-lockup{ display:none; } }
 
 /* Search */
 .search-wrap { flex: 1; max-width: 720px; position: relative; }
@@ -1269,6 +1272,50 @@ body.edit #editBanner { display: flex; }
 .dash-title-list { max-height: 180px; overflow-y: auto; border: 1px solid var(--md-outline-var); border-radius: 8px; background: var(--md-surface-1); }
 .dash-title-item { font-size: 12px; padding: 6px 12px; border-bottom: 1px solid var(--md-outline-var); }
 .dash-title-item:last-child { border-bottom: none; }
+
+/* methodology */
+.meth-ph-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--md-surface-1); border: 1px solid var(--md-outline-var); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; }
+.meth-ph-label { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--md-primary); }
+.meth-ph-input { display: inline-flex; align-items: center; gap: 6px; }
+.meth-ph-input code { font-family: var(--font-mono); font-size: 12px; color: var(--md-secondary); background: var(--md-secondary-container); padding: 2px 6px; border-radius: 4px; }
+.meth-ph-input input { width: 130px; font-family: var(--font-mono); font-size: 12px; padding: 5px 9px; background: var(--md-surface); border: 1px solid var(--md-outline-var); border-radius: 6px; color: var(--md-on-surface); }
+.meth-ph-input input:focus { outline: none; border-color: var(--md-primary); }
+.meth-toolbar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.meth-tool-btn { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 12px; color: var(--md-on-surface-var); border: 1px solid var(--md-outline-var); border-radius: 7px; padding: 6px 12px; background: var(--md-surface); }
+.meth-tool-btn:hover { color: var(--md-primary); border-color: var(--md-primary); }
+
+.meth-sections { display: flex; flex-direction: column; gap: 10px; }
+.meth-section { border: 1px solid var(--md-outline-var); border-radius: 12px; overflow: hidden; background: var(--md-surface); }
+.meth-section.open { border-color: var(--md-primary); }
+.meth-section-head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 14px 16px; background: none; text-align: left; }
+.meth-section-head:hover { background: var(--md-surface-1); }
+.meth-chevron { color: var(--md-on-surface-var); font-size: 20px; flex-shrink: 0; }
+.meth-section-label { font-size: 15px; font-weight: 700; font-family: var(--font-mono); color: var(--md-on-surface); }
+.meth-section-trigger { font-size: 12px; color: var(--md-on-surface-var); background: var(--md-surface-2); border-radius: 4px; padding: 2px 8px; }
+.meth-section-prog { margin-left: auto; font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--md-on-surface-var); background: var(--md-surface-2); border-radius: 20px; padding: 3px 11px; flex-shrink: 0; }
+.meth-section-prog.complete { color: var(--md-success); background: var(--md-success-container, rgba(63,208,127,.15)); }
+.meth-section-edit { display: grid; place-items: center; width: 28px; height: 28px; color: var(--md-on-surface-var); border-radius: 6px; flex-shrink: 0; }
+.meth-section-edit:hover { background: var(--md-surface-2); color: var(--md-primary); }
+.meth-section-body { padding: 4px 16px 14px; display: flex; flex-direction: column; gap: 8px; }
+.meth-cert-badge { font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--md-primary); background: var(--md-secondary-container); border-radius: 4px; padding: 2px 8px; }
+
+.meth-step { display: flex; gap: 10px; padding: 11px 12px; border: 1px solid var(--md-outline-var); border-radius: 9px; background: var(--md-surface-1); transition: opacity .15s; }
+.meth-step.checked { opacity: .55; }
+.meth-step.checked .meth-step-label { text-decoration: line-through; }
+.meth-check { flex-shrink: 0; color: var(--md-primary); width: 26px; height: 26px; display: grid; place-items: center; }
+.meth-check .material-symbols-rounded { font-size: 20px; }
+.meth-step-body { flex: 1; min-width: 0; }
+.meth-step-label { font-size: 13.5px; font-weight: 600; color: var(--md-on-surface); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.meth-step-acts { display: flex; gap: 3px; flex-shrink: 0; }
+.meth-step-act { display: grid; place-items: center; width: 24px; height: 24px; color: var(--md-on-surface-var); border: 1px solid transparent; border-radius: 5px; }
+.meth-step-act:hover { background: var(--md-surface-2); border-color: var(--md-outline-var); }
+.meth-step-act.danger:hover { color: var(--md-error); }
+.meth-cmd { font-family: var(--font-mono); font-size: 12px; background: var(--code-block-bg); color: var(--code-block-fg); border: 1px solid var(--md-outline-var); border-radius: 7px; padding: 9px 40px 9px 12px; white-space: pre-wrap; word-break: break-all; line-height: 1.55; position: relative; margin: 0 0 6px; }
+.meth-cmd.resolved { border-left: 3px solid var(--md-primary); }
+.meth-hint { font-size: 12px; color: var(--md-warn, #e0a944); display: flex; align-items: flex-start; gap: 5px; line-height: 1.5; margin-top: 3px; }
+.meth-next { font-size: 12px; color: var(--md-primary); display: flex; align-items: flex-start; gap: 5px; line-height: 1.5; margin-top: 3px; }
+.meth-add-step { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 12px; color: var(--md-on-surface-var); border: 1px dashed var(--md-outline); border-radius: 7px; padding: 7px 12px; margin-top: 2px; align-self: flex-start; }
+.meth-add-step:hover { color: var(--md-primary); border-color: var(--md-primary); }
 </style>
 </head>
 <body>
@@ -1280,8 +1327,25 @@ body.edit #editBanner { display: flex; }
       <span class="material-symbols-rounded">menu</span>
     </button>
     <div class="brand" id="brandHome" role="button" tabindex="0" title="ホームへ">
-      <span class="brand-logo"><span class="material-symbols-rounded">terminal</span></span>
-      <span class="brand-text">go2 cheatsheet</span>
+      <svg class="brand-mark" viewBox="0 0 120 108" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <linearGradient id="go2grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#4aa3ff"/>
+            <stop offset="1" stop-color="#1a6dff"/>
+          </linearGradient>
+        </defs>
+        <!-- 六角形の右側(青グラデ) -->
+        <path d="M60 4 L104 29 L104 79 L60 104 L74 96 L74 33 Z" fill="url(#go2grad)"/>
+        <!-- 六角形の左側(テーマ追従) -->
+        <path d="M60 4 L46 12 L20 27 L20 81 L46 96 L60 104 L46 96 L34 79 L34 29 L46 12 Z" class="brand-mark-dark" fill="none" stroke="currentColor" stroke-width="9" stroke-linejoin="round"/>
+        <!-- >_ ターミナル記号 -->
+        <path d="M40 42 L54 54 L40 66" class="brand-mark-dark" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="50" y="62" width="20" height="8" rx="4" class="brand-mark-dark" fill="currentColor"/>
+      </svg>
+      <span class="brand-lockup">
+        <span class="brand-text"><span class="brand-go2">go2</span> <span class="brand-cs">cheatsheet</span></span>
+        <span class="brand-sub">COMMAND KNOWLEDGE · EXECUTE EXCELLENCE</span>
+      </span>
     </div>
     <div class="search-wrap">
       <div class="search-box">
@@ -1317,6 +1381,7 @@ body.edit #editBanner { display: flex; }
       <button data-mode="cheatsheet" class="on" title="チートシート"><span class="material-symbols-rounded">grid_view</span><span class="mode-label">チートシート</span></button>
       <button data-mode="tools" title="ツール・リファレンス"><span class="material-symbols-rounded">build</span><span class="mode-label">ツール</span></button>
       <button data-mode="knowledge" title="ナレッジ・リンク集"><span class="material-symbols-rounded">menu_book</span><span class="mode-label">ナレッジ</span></button>
+      <button data-mode="methodology" title="攻略メソドロジー"><span class="material-symbols-rounded">account_tree</span><span class="mode-label">メソドロジー</span></button>
       <span class="mode-group-sep" title="攻撃"></span>
       <button data-mode="logbook" title="攻撃ログブック"><span class="material-symbols-rounded">track_changes</span><span class="mode-label">攻撃ログ</span></button>
       <button data-mode="web" title="Web攻略 (OSWA)"><span class="material-symbols-rounded">language</span><span class="mode-label">Web攻略</span></button>
@@ -1366,5 +1431,6 @@ body.edit #editBanner { display: flex; }
 <script src="knowledge_data.js"></script>
 <script src="knowledge.js"></script>
 <script src="dashboards.js"></script>
+<script src="methodology.js"></script>
 </body>
 </html>

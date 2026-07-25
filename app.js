@@ -11,8 +11,8 @@
 ════════════════════════════════════════════════════════ */
 
 /* ── STATE ─────────────────────────────────────────── */
-let data       = { tabs: [], machines: [], phases: [], hunts: [], queries: [], targets: [], payloads: [], vulnTypes: [], tools: [], knowledge: [], dashboards: [] };
-let appMode    = "cheatsheet";  // ... | "knowledge" | "dashboards"
+let data       = { tabs: [], machines: [], phases: [], hunts: [], queries: [], targets: [], payloads: [], vulnTypes: [], tools: [], knowledge: [], dashboards: [], methodologies: [] };
+let appMode    = "cheatsheet";  // ... | "dashboards" | "methodology"
 let activeId   = null;          // current sheet (tab) id
 let activeCat  = null;          // current category
 let view       = "home";        // home | cat | tab | search
@@ -64,6 +64,12 @@ const DASH_PLATFORMS = {
   kibana: { label: "Kibana", color: "#00bfb3", ext: "ndjson", accept: ".ndjson,.json" },
   splunk: { label: "Splunk", color: "#f8be34", ext: "xml",    accept: ".xml,.json,.tar.gz" },
 };
+
+/* methodology state */
+let methCert      = "OSCP";     // OSCP | OSWA（資格タブ）
+let methPlaceholders = {};      // { "<IP>": "10.10.10.5", ... } プレースホルダ置換値
+let methChecked   = {};         // { stepId: true } セッション参照用チェック
+let methOpenSections = {};      // { sectionId: true } アコーディオン開閉
 
 /* category presentation metadata (order + icon + description) */
 const CAT_META = {
@@ -387,6 +393,29 @@ function normalizeData() {
     db.meta = db.meta || null;               // { dashboards, searches, ... }
     db.ts = db.ts || Date.now();
   });
+
+  // ── Methodology（新規・後方互換） ──
+  if (!Array.isArray(data.methodologies)) data.methodologies = [];
+  data.methodologies.forEach(m => {
+    m.id = m.id || uid();
+    m.title = m.title || "無名メソドロジー";
+    m.cert = m.cert || "OSCP";              // OSCP | OSWA
+    m.sections = Array.isArray(m.sections) ? m.sections : [];
+    m.sections.forEach(s => {
+      s.id = s.id || uid();
+      s.label = s.label || "";
+      s.trigger = s.trigger || "";
+      s.steps = Array.isArray(s.steps) ? s.steps : [];
+      s.steps.forEach(st => {
+        st.id = st.id || uid();
+        st.label = st.label || "";
+        st.command = st.command || "";
+        st.hint = st.hint || "";
+        st.next = st.next || "";
+      });
+    });
+    m.ts = m.ts || Date.now();
+  });
 }
 
 /* categories present in data, ordered */
@@ -441,6 +470,7 @@ function render() {
   if (appMode === "tools")   { renderTools(); return; }
   if (appMode === "knowledge") { renderKnowledge(); return; }
   if (appMode === "dashboards") { renderDashboards(); return; }
+  if (appMode === "methodology") { renderMethodology(); return; }
   renderNav();
   if (searchMode)       renderSearch();
   else if (view === "home") renderHome();
@@ -463,6 +493,7 @@ function setMode(mode) {
   document.body.classList.toggle("mode-tools", mode === "tools");
   document.body.classList.toggle("mode-knowledge", mode === "knowledge");
   document.body.classList.toggle("mode-dashboards", mode === "dashboards");
+  document.body.classList.toggle("mode-methodology", mode === "methodology");
   render();
   document.getElementById("main").scrollTop = 0;
   try { window.scrollTo(0, 0); } catch(e){}
@@ -483,6 +514,7 @@ function syncModeUI() {
       tools: "ツール・コマンドを検索…",
       knowledge: "ナレッジ・URL・タグを検索…",
       dashboards: "ダッシュボードを検索…",
+      methodology: "手法・ポート・コマンドを検索…",
       cheatsheet: "コマンド・フィールド・コードを検索…"
     };
     si.placeholder = ph[appMode] ?? ph.cheatsheet;
@@ -765,6 +797,7 @@ function bindGlobalUI() {
     if (appMode === "tools")   { renderToolsSearch(); return; }
     if (appMode === "knowledge") { renderKnowledgeSearch(); return; }
     if (appMode === "dashboards") { renderDashboardsSearch(); return; }
+    if (appMode === "methodology") { renderMethodologySearch(); return; }
     renderNav(); renderSearch();
   });
   document.getElementById("searchClear").onclick = () => { clearSearchInput(); searchMode=false; render(); si.focus(); };
@@ -779,6 +812,7 @@ function bindGlobalUI() {
     else if (appMode === "tools") { toolsView="list"; toolId=null; searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "knowledge") { knowView="list"; knowDetailId=null; searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "dashboards") { searchMode=false; clearSearchInput(); render(); }
+    else if (appMode === "methodology") { searchMode=false; clearSearchInput(); render(); }
     else goHome();
   };
   document.getElementById("brandHome").onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); document.getElementById("brandHome").onclick(); } };

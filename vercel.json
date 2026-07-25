@@ -1,13 +1,10 @@
 {
   "functions": {
     "api/auth.js": {
-      "includeFiles": "index.html|app.js|logbook.js|hunting.js|web.js|tools.js|knowledge.js|knowledge_data.js|dashboards.js|data.json"
+      "includeFiles": "index.html|app.js|logbook.js|hunting.js|web.js|tools.js|knowledge.js|knowledge_data.js|dashboards.js|methodology.js|data.json"
     }
   },
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/api/auth"
-    }
+    { "source": "/(.*)", "destination": "/api/auth" }
   ]
 }
