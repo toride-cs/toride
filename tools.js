@@ -120,11 +120,13 @@ function renderToolDetail() {
   if (!t) { toolsView="list"; renderTools(); return; }
   const pr = toolPrioMeta(t.priority);
 
-  const cmds = (t.commands||[]).map((c,i) => `
+  const cmds = (t.commands||[]).map((c,i,arr) => `
     <div class="tool-cmd-block">
       <div class="tool-cmd-label">
         <span>${esc(c.label)||`コマンド ${i+1}`}</span>
         <span class="tool-cmd-acts">
+          <button class="tool-cmd-act" onclick="tMoveCommand('${t.id}','${c.id}',-1)" title="上へ" ${i===0?'disabled':''}><span class="material-symbols-rounded" style="font-size:14px">arrow_upward</span></button>
+          <button class="tool-cmd-act" onclick="tMoveCommand('${t.id}','${c.id}',1)" title="下へ" ${i===arr.length-1?'disabled':''}><span class="material-symbols-rounded" style="font-size:14px">arrow_downward</span></button>
           <button class="tool-cmd-act" onclick="tEditCommand('${t.id}','${c.id}')" title="編集"><span class="material-symbols-rounded" style="font-size:14px">edit</span></button>
           <button class="tool-cmd-act danger" onclick="tDelCommand('${t.id}','${c.id}')" title="削除"><span class="material-symbols-rounded" style="font-size:14px">delete</span></button>
         </span>
@@ -238,8 +240,8 @@ function tAddCommand(id) {
   const t = data.tools.find(x=>x.id===id); if (!t) return;
   openModal("コマンドを追加",
     `<label>ラベル</label><input id="cLabel" placeholder="例: DB列挙">
-     <label>コマンド</label><textarea id="cCmd" placeholder="sqlmap -r request.txt --dbs --batch"></textarea>
-     <label>補足（任意）</label><input id="cNote" placeholder="まず存在するDB名を列挙">`,
+     <label>コマンド</label><textarea id="cCmd" class="mono-input" placeholder="sqlmap -r request.txt --dbs --batch"></textarea>
+     <label>補足（任意・改行可）</label><textarea id="cNote" placeholder="まず存在するDB名を列挙"></textarea>`,
     () => {
       t.commands.push({ id:uid(), label:val("cLabel"), cmd:val("cCmd"), note:val("cNote") });
       renderToolDetail(); toast("✅ コマンドを追加しました");
@@ -251,8 +253,8 @@ function tEditCommand(toolId, cmdId) {
   const c = (t.commands||[]).find(x=>x.id===cmdId); if (!c) return;
   openModal("コマンドを編集",
     `<label>ラベル</label><input id="cLabel" value="${esc(c.label)}">
-     <label>コマンド</label><textarea id="cCmd">${esc(c.cmd)}</textarea>
-     <label>補足（任意）</label><input id="cNote" value="${esc(c.note)}">`,
+     <label>コマンド</label><textarea id="cCmd" class="mono-input">${esc(c.cmd)}</textarea>
+     <label>補足（任意・改行可）</label><textarea id="cNote">${esc(c.note)}</textarea>`,
     () => {
       c.label=val("cLabel"); c.cmd=val("cCmd"); c.note=val("cNote");
       renderToolDetail(); toast("✅ コマンドを更新しました");
@@ -266,6 +268,15 @@ function tDelCommand(toolId, cmdId) {
   if (!confirm(`コマンド「${c.label||c.cmd.slice(0,20)}」を削除しますか？`)) return;
   t.commands = t.commands.filter(x=>x.id!==cmdId);
   renderToolDetail(); toast("🗑 削除しました");
+}
+
+function tMoveCommand(toolId, cmdId, dir) {
+  const t = data.tools.find(x=>x.id===toolId); if (!t) return;
+  const i = t.commands.findIndex(x=>x.id===cmdId); if (i<0) return;
+  const j = i + dir;
+  if (j < 0 || j >= t.commands.length) return;
+  [t.commands[i], t.commands[j]] = [t.commands[j], t.commands[i]];
+  renderToolDetail();
 }
 
 /* 検索 */

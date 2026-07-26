@@ -1194,7 +1194,9 @@ body.edit #editBanner { display: flex; }
 .tool-cmd-box { font-family: var(--font-mono); font-size: 12.5px; background: var(--code-block-bg); color: var(--code-block-fg); border: 1px solid var(--md-outline-var); border-radius: 8px; padding: 11px 40px 11px 14px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; position: relative; margin: 0; }
 .tool-cmd-copy { position: absolute; right: 8px; top: 8px; width: 26px; height: 26px; display: grid; place-items: center; color: var(--md-on-surface-var); border: 1px solid var(--md-outline-var); border-radius: 5px; background: var(--md-surface); }
 .tool-cmd-copy:hover { background: var(--md-surface-2); color: var(--md-primary); }
-.tool-cmd-note { font-size: 12px; color: var(--md-on-surface-var); margin-top: 5px; padding-left: 2px; }
+.tool-cmd-note { font-size: 12px; color: var(--md-on-surface-var); margin-top: 5px; padding-left: 2px; white-space: pre-wrap; line-height: 1.55; }
+.mono-input { font-family: var(--font-mono) !important; font-size: 12.5px !important; }
+.tool-cmd-act:disabled { opacity: .3; cursor: not-allowed; pointer-events: none; }
 .tool-add-cmd { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 12px; color: var(--md-on-surface-var); border: 1px dashed var(--md-outline); border-radius: var(--radius-sm); padding: 8px 14px; margin-top: 4px; }
 .tool-add-cmd:hover { border-color: var(--md-primary); color: var(--md-primary); }
 .tool-tips-box { font-size: 13px; color: var(--md-on-surface); background: rgba(224,169,68,.06); border-left: 3px solid #e0a944; border-radius: 0 8px 8px 0; padding: 12px 15px; line-height: 1.7; }
@@ -1316,6 +1318,8 @@ body.edit #editBanner { display: flex; }
 .meth-next { font-size: 12px; color: var(--md-primary); display: flex; align-items: flex-start; gap: 5px; line-height: 1.5; margin-top: 3px; }
 .meth-add-step { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 12px; color: var(--md-on-surface-var); border: 1px dashed var(--md-outline); border-radius: 7px; padding: 7px 12px; margin-top: 2px; align-self: flex-start; }
 .meth-add-step:hover { color: var(--md-primary); border-color: var(--md-primary); }
+.meth-import-opt { font-size: 12.5px; color: var(--md-on-surface); margin: 12px 0 6px; }
+.meth-import-hint { font-size: 11.5px; color: var(--md-on-surface-var); font-family: var(--font-mono); }
 </style>
 </head>
 <body>

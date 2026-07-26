@@ -110,6 +110,7 @@ function renderMethodology() {
       <button class="meth-tool-btn" onclick="mExpandAll(true)"><span class="material-symbols-rounded" style="font-size:15px">unfold_more</span>すべて開く</button>
       <button class="meth-tool-btn" onclick="mExpandAll(false)"><span class="material-symbols-rounded" style="font-size:15px">unfold_less</span>すべて閉じる</button>
       <button class="meth-tool-btn" onclick="mResetChecks()"><span class="material-symbols-rounded" style="font-size:15px">restart_alt</span>チェックをリセット</button>
+      <button class="meth-tool-btn" onclick="mImportJson()"><span class="material-symbols-rounded" style="font-size:15px">upload_file</span>JSONで取り込み</button>
     </div>
     ${sections.length ? `<div class="meth-sections">${sections.join("")}</div>`
       : emptyState("account_tree", "この資格のメソドロジーがまだありません", "「節を追加」で作成できます")}
@@ -132,7 +133,7 @@ function renderMethStep(st) {
             <button class="meth-step-act danger" onclick="mDelStep('${st.id}')" title="削除"><span class="material-symbols-rounded" style="font-size:13px">delete</span></button>
           </span>
         </div>
-        ${st.command?`<pre class="meth-cmd ${hasPh?'resolved':''}">${esc(cmd)}<button class="tool-cmd-copy" onclick="event.stopPropagation();copyToClipboard(${escAttr(JSON.stringify(cmd))});toast('📋 コピーしました')" title="コピー"><span class="material-symbols-rounded" style="font-size:14px">content_copy</span></button></pre>`:""}
+        ${st.command?`<pre class="meth-cmd ${hasPh?'resolved':''}" data-stepid="${st.id}" data-rawcmd="${escAttr(st.command)}"><span class="meth-cmd-text">${esc(cmd)}</span><button class="tool-cmd-copy" onclick="event.stopPropagation();copyToClipboard(${escAttr(JSON.stringify(cmd))});toast('📋 コピーしました')" title="コピー"><span class="material-symbols-rounded" style="font-size:14px">content_copy</span></button></pre>`:""}
         ${st.hint?`<div class="meth-hint"><span class="material-symbols-rounded" style="font-size:13px">lightbulb</span>${esc(st.hint)}</div>`:""}
         ${st.next?`<div class="meth-next"><span class="material-symbols-rounded" style="font-size:13px">arrow_forward</span>${esc(st.next)}</div>`:""}
       </div>
@@ -141,9 +142,21 @@ function renderMethStep(st) {
 
 /* 操作 */
 function mSetCert(c){ methCert=c; renderMethodology(); }
-function mSetPh(ph,v){ methPlaceholders[ph]=v; // 再描画せず、コマンド表示だけ更新するため全体再描画
-  // 開いてるセクションのコマンドを更新
-  document.querySelectorAll(".meth-cmd").forEach(()=>{}); renderMethodology(); }
+function mSetPh(ph,v){
+  methPlaceholders[ph]=v;
+  // 全体再描画するとフォーカスが外れる（1文字ずつ問題）ので、
+  // 表示中のコマンドテキストとコピーボタンだけを直接更新する
+  document.querySelectorAll(".meth-cmd").forEach(pre => {
+    const raw = pre.getAttribute("data-rawcmd") || "";
+    const resolved = methApplyPlaceholders(raw);
+    const textEl = pre.querySelector(".meth-cmd-text");
+    if (textEl) textEl.textContent = resolved;
+    pre.classList.toggle("resolved", resolved !== raw);
+    const copyBtn = pre.querySelector(".tool-cmd-copy");
+    if (copyBtn) copyBtn.setAttribute("onclick",
+      `event.stopPropagation();copyToClipboard(${escAttr(JSON.stringify(resolved))});toast('📋 コピーしました')`);
+  });
+}
 function mToggleSection(id){ methOpenSections[id]=!methOpenSections[id]; renderMethodology(); }
 function mToggleCheck(id){ methChecked[id]=!methChecked[id]; renderMethodology(); }
 function mExpandAll(open){
@@ -153,6 +166,60 @@ function mExpandAll(open){
 function mResetChecks(){
   if(!confirm("チェックを全てリセットしますか？")) return;
   methChecked={}; renderMethodology(); toast("チェックをリセットしました");
+}
+
+/* JSON一括取り込み（節・手法をまとめて追加） */
+function mImportJson() {
+  openModal("JSONで取り込み",
+    `<div class="know-paste-zone">
+       <label style="display:flex;align-items:center;gap:8px">
+         <span class="material-symbols-rounded" style="font-size:16px;color:var(--md-primary)">content_paste</span>
+         Claudeが作った節データのJSONを貼り付け
+       </label>
+       <textarea id="mImportText" class="mono-input" placeholder='{"cert":"OSWA","sections":[{"label":"...","trigger":"...","steps":[{"label":"...","command":"...","hint":"...","next":"..."}]}]}' style="min-height:160px"></textarea>
+     </div>
+     <div class="meth-import-opt">
+       <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+         <input type="checkbox" id="mImportMerge" checked>
+         同名の節があれば手法を追記（オフなら別の節として追加）
+       </label>
+     </div>
+     <div class="meth-import-hint">現在の資格タブ「${methCert}」に取り込まれます（JSONのcertが優先）</div>`,
+    () => {
+      const raw = val("mImportText").trim();
+      if (!raw) { toast("JSONを貼り付けてください"); return; }
+      let obj;
+      try { obj = JSON.parse(raw); }
+      catch(e) { toast("⚠ JSONの形式が正しくありません"); return; }
+      const cert = obj.cert || methCert;
+      const sections = Array.isArray(obj.sections) ? obj.sections : (Array.isArray(obj) ? obj : null);
+      if (!sections) { toast("⚠ sections配列が見つかりません"); return; }
+      const merge = document.getElementById("mImportMerge")?.checked;
+
+      // 対象のmethodology（資格）を取得 or 作成
+      let m = data.methodologies.find(x=>x.cert===cert);
+      if (!m) { m = { id: uid(), title: `${cert} Methodology`, cert, sections: [], ts: Date.now() }; data.methodologies.push(m); }
+
+      let addedSec=0, addedStep=0;
+      sections.forEach(sec => {
+        const steps = (Array.isArray(sec.steps)?sec.steps:[]).map(st=>({
+          id: uid(), label: st.label||"", command: st.command||"", hint: st.hint||"", next: st.next||""
+        }));
+        const existing = merge ? m.sections.find(s=>s.label===sec.label) : null;
+        if (existing) {
+          existing.steps.push(...steps); addedStep+=steps.length;
+        } else {
+          const sid = uid();
+          m.sections.push({ id: sid, label: sec.label||"新しい節", trigger: sec.trigger||"", steps });
+          methOpenSections[sid]=false;
+          addedSec++; addedStep+=steps.length;
+        }
+      });
+      methCert = cert;
+      renderMethodology();
+      toast(`✅ ${addedSec}節・${addedStep}手法を取り込みました`);
+    },
+    { okText: "取り込む" });
 }
 
 /* 節の追加・編集 */
