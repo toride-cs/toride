@@ -276,6 +276,16 @@ function kApplyJson() {
   toast("✅ 各欄に展開しました（保存で反映）");
 }
 
+/* usage(使い方・コマンド)の並び替え */
+function kMoveUsage(id, i, dir) {
+  const k = data.knowledge.find(x=>x.id===id); if (!k || !k.detail || !Array.isArray(k.detail.usage)) return;
+  const arr = k.detail.usage;
+  const j = i + dir;
+  if (j < 0 || j >= arr.length) return;
+  [arr[i], arr[j]] = [arr[j], arr[i]];
+  renderKnowDetail();
+}
+
 function renderKnowDetail() {
   renderKnowNav();
   const main = document.getElementById("main");
@@ -289,9 +299,15 @@ function renderKnowDetail() {
     ? `<div class="know-d-sec"><h4>要点</h4><ul class="know-d-list">${d.keyPoints.map(p=>`<li>${esc(p)}</li>`).join("")}</ul></div>` : "";
 
   const usage = (d.usage||[]).length
-    ? `<div class="know-d-sec"><h4>使い方・コマンド</h4>${d.usage.map(u=>`
+    ? `<div class="know-d-sec"><h4>使い方・コマンド</h4>${d.usage.map((u,i,arr)=>`
         <div class="know-d-usage">
-          <div class="know-d-usage-label">${esc(u.label)}</div>
+          <div class="know-d-usage-label">
+            <span>${esc(u.label)}</span>
+            <span class="know-d-usage-acts">
+              <button class="know-d-usage-act" onclick="kMoveUsage('${k.id}',${i},-1)" title="上へ" ${i===0?'disabled':''}><span class="material-symbols-rounded" style="font-size:14px">arrow_upward</span></button>
+              <button class="know-d-usage-act" onclick="kMoveUsage('${k.id}',${i},1)" title="下へ" ${i===arr.length-1?'disabled':''}><span class="material-symbols-rounded" style="font-size:14px">arrow_downward</span></button>
+            </span>
+          </div>
           <pre class="know-d-code">${esc(u.content)}<button class="tool-cmd-copy" onclick="event.stopPropagation();copyCell(event, ${escAttr(JSON.stringify(u.content))})" title="コピー"><span class="material-symbols-rounded" style="font-size:14px">content_copy</span></button></pre>
         </div>`).join("")}</div>` : "";
 

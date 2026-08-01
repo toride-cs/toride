@@ -213,6 +213,8 @@ function renderLbMachine() {
       <div class="lb-entry" style="--pc:${color}">
         <div class="lb-entry-head">
           <span class="lb-ph-badge" style="background:${color}22;color:${color}">${esc(plabel)}</span>
+          <button class="lb-step-edit" onclick="lbMoveStep('${realIdx}',-1)" title="上へ" ${realIdx===0?'disabled':''}><span class="material-symbols-rounded">arrow_upward</span></button>
+          <button class="lb-step-edit" onclick="lbMoveStep('${realIdx}',1)" title="下へ" ${realIdx===a.steps.length-1?'disabled':''}><span class="material-symbols-rounded">arrow_downward</span></button>
           <button class="lb-step-edit" onclick="lbEditStep('${realIdx}')" title="編集"><span class="material-symbols-rounded">edit</span></button>
           <button class="lb-step-del" onclick="lbDelStep('${realIdx}')" title="削除"><span class="material-symbols-rounded">delete</span></button>
           <span class="lb-entry-time">${lbHHMM(s.ts)}</span>
@@ -350,6 +352,16 @@ function lbDelStep(idx) {
   const a = lbAttempt(); if (!a) return;
   if (!confirm("このログを削除しますか？")) return;
   a.steps.splice(idx, 1);
+  renderLbMachine();
+}
+
+/* ステップの並び替え */
+function lbMoveStep(idx, dir) {
+  const a = lbAttempt(); if (!a) return;
+  idx = Number(idx);
+  const j = idx + dir;
+  if (j < 0 || j >= a.steps.length) return;
+  [a.steps[idx], a.steps[j]] = [a.steps[j], a.steps[idx]];
   renderLbMachine();
 }
 

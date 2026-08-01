@@ -78,10 +78,10 @@ function renderMethodology() {
   // セクション（アコーディオン）
   const sections = [];
   list.forEach(m => {
-    m.sections.forEach(s => {
+    m.sections.forEach((s, si, sarr) => {
       const done = s.steps.filter(st=>methChecked[st.id]).length;
       const open = methOpenSections[s.id];
-      const stepsHtml = open ? s.steps.map(st => renderMethStep(st)).join("") : "";
+      const stepsHtml = open ? s.steps.map((st,sti,starr) => renderMethStep(st, m.id, s.id, sti, starr.length)).join("") : "";
       sections.push(`
         <div class="meth-section ${open?'open':''}">
           <button class="meth-section-head" onclick="mToggleSection('${s.id}')">
@@ -89,6 +89,8 @@ function renderMethodology() {
             <span class="meth-section-label">${esc(s.label)}</span>
             ${s.trigger?`<span class="meth-section-trigger">${esc(s.trigger)}</span>`:""}
             <span class="meth-section-prog ${done===s.steps.length&&done>0?'complete':''}">${done}/${s.steps.length}</span>
+            <span class="meth-section-move" onclick="event.stopPropagation();mMoveSection('${m.id}','${s.id}',-1)" title="節を上へ" ${si===0?'style="opacity:.3;pointer-events:none"':''}><span class="material-symbols-rounded" style="font-size:15px">arrow_upward</span></span>
+            <span class="meth-section-move" onclick="event.stopPropagation();mMoveSection('${m.id}','${s.id}',1)" title="節を下へ" ${si===sarr.length-1?'style="opacity:.3;pointer-events:none"':''}><span class="material-symbols-rounded" style="font-size:15px">arrow_downward</span></span>
             <span class="meth-section-edit" onclick="event.stopPropagation();mEditSection('${s.id}')" title="節を編集"><span class="material-symbols-rounded" style="font-size:15px">edit</span></span>
           </button>
           ${open?`<div class="meth-section-body">${stepsHtml}
@@ -117,10 +119,14 @@ function renderMethodology() {
   `;
 }
 
-function renderMethStep(st) {
+function renderMethStep(st, mId, sId, idx, total) {
   const checked = !!methChecked[st.id];
   const cmd = methApplyPlaceholders(st.command);
   const hasPh = st.command !== cmd;  // 置換が起きたか
+  const canMove = (mId !== undefined && total !== undefined);
+  const moveBtns = canMove ? `
+            <button class="meth-step-act" onclick="mMoveStep('${mId}','${sId}',${idx},-1)" title="上へ" ${idx===0?'disabled':''}><span class="material-symbols-rounded" style="font-size:13px">arrow_upward</span></button>
+            <button class="meth-step-act" onclick="mMoveStep('${mId}','${sId}',${idx},1)" title="下へ" ${idx===total-1?'disabled':''}><span class="material-symbols-rounded" style="font-size:13px">arrow_downward</span></button>` : "";
   return `
     <div class="meth-step ${checked?'checked':''}">
       <button class="meth-check" onclick="mToggleCheck('${st.id}')" title="チェック">
@@ -128,7 +134,7 @@ function renderMethStep(st) {
       </button>
       <div class="meth-step-body">
         <div class="meth-step-label">${esc(st.label)}
-          <span class="meth-step-acts">
+          <span class="meth-step-acts">${moveBtns}
             <button class="meth-step-act" onclick="mEditStep('${st.id}')" title="編集"><span class="material-symbols-rounded" style="font-size:13px">edit</span></button>
             <button class="meth-step-act danger" onclick="mDelStep('${st.id}')" title="削除"><span class="material-symbols-rounded" style="font-size:13px">delete</span></button>
           </span>
@@ -247,6 +253,26 @@ function mFindStep(stepId) {
   for (const m of data.methodologies) for (const s of m.sections) { const st = s.steps.find(x=>x.id===stepId); if (st) return {m,s,st}; }
   return null;
 }
+
+/* 節の並び替え */
+function mMoveSection(mId, sId, dir) {
+  const m = data.methodologies.find(x=>x.id===mId); if (!m) return;
+  const i = m.sections.findIndex(s=>s.id===sId); if (i<0) return;
+  const j = i + dir;
+  if (j < 0 || j >= m.sections.length) return;
+  [m.sections[i], m.sections[j]] = [m.sections[j], m.sections[i]];
+  renderMethodology();
+}
+/* 手法の並び替え */
+function mMoveStep(mId, sId, idx, dir) {
+  const m = data.methodologies.find(x=>x.id===mId); if (!m) return;
+  const s = m.sections.find(x=>x.id===sId); if (!s) return;
+  const j = idx + dir;
+  if (j < 0 || j >= s.steps.length) return;
+  [s.steps[idx], s.steps[j]] = [s.steps[j], s.steps[idx]];
+  renderMethodology();
+}
+
 function mEditSection(sid) {
   const f = mFindSection(sid); if (!f) return;
   openModal("節を編集",

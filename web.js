@@ -395,6 +395,8 @@ function renderTargetDetail() {
           <span class="web-vt" style="background:${c}22;color:${c}">${esc(vtLabel(f.vulnType).split(" ")[0])}</span>
           ${f.endpoint?`<span class="web-finding-ep">${esc(f.endpoint)}</span>`:""}
           <span class="web-finding-verdict ${esc(f.verdict)}">${esc(f.verdict)}</span>
+          <button class="th-step-edit" onclick="wMoveFinding(${realIdx},-1)" title="上へ" ${realIdx===0?'disabled':''}><span class="material-symbols-rounded" style="font-size:14px">arrow_upward</span></button>
+          <button class="th-step-edit" onclick="wMoveFinding(${realIdx},1)" title="下へ" ${realIdx===t.findings.length-1?'disabled':''}><span class="material-symbols-rounded" style="font-size:14px">arrow_downward</span></button>
           <button class="th-step-edit" onclick="wEditFinding(${realIdx})" title="編集"><span class="material-symbols-rounded" style="font-size:14px">edit</span></button>
           <button class="th-step-del" onclick="wDelFinding(${realIdx})" title="削除"><span class="material-symbols-rounded" style="font-size:14px">delete</span></button>
         </div>
@@ -528,6 +530,16 @@ function wDelFinding(idx) {
   const t = webTarget(); if (!t.findings[idx]) return;
   if (!confirm("この発見を削除しますか？")) return;
   t.findings.splice(idx,1); renderTargetDetail();
+}
+
+/* findingの並び替え */
+function wMoveFinding(idx, dir) {
+  const t = webTarget(); if (!t) return;
+  idx = Number(idx);
+  const j = idx + dir;
+  if (j < 0 || j >= t.findings.length) return;
+  [t.findings[idx], t.findings[j]] = [t.findings[j], t.findings[idx]];
+  renderTargetDetail();
 }
 
 /* 発見のペイロードをライブラリに保存 */

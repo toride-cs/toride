@@ -348,6 +348,8 @@ function renderHuntDetail() {
         <span class="th-verdict ${esc(s.verdict)}">${esc(s.verdict)}</span>
         <span class="th-lang th-lang-${huntLangClass(s.lang)}" style="font-size:9px">${esc(s.lang)}</span>
         <span class="th-hentry-time">${huntHHMM(s.ts)}</span>
+        <button class="th-step-edit" onclick="hMoveStep(${realIdx},-1)" title="上へ" ${realIdx===0?'disabled':''}><span class="material-symbols-rounded" style="font-size:14px">arrow_upward</span></button>
+        <button class="th-step-edit" onclick="hMoveStep(${realIdx},1)" title="下へ" ${realIdx===h.steps.length-1?'disabled':''}><span class="material-symbols-rounded" style="font-size:14px">arrow_downward</span></button>
         <button class="th-step-edit" onclick="hEditStep(${realIdx})" title="編集"><span class="material-symbols-rounded" style="font-size:14px">edit</span></button>
         <button class="th-step-del" onclick="hDelStep(${realIdx})" title="削除"><span class="material-symbols-rounded" style="font-size:14px">delete</span></button>
       </div>
@@ -459,6 +461,16 @@ function hDelStep(idx) {
   const h = huntGet(); if (!h.steps[idx]) return;
   if (!confirm("この記録を削除しますか？")) return;
   h.steps.splice(idx,1); renderHuntDetail();
+}
+
+/* ステップの並び替え */
+function hMoveStep(idx, dir) {
+  const h = huntGet(); if (!h) return;
+  idx = Number(idx);
+  const j = idx + dir;
+  if (j < 0 || j >= h.steps.length) return;
+  [h.steps[idx], h.steps[j]] = [h.steps[j], h.steps[idx]];
+  renderHuntDetail();
 }
 
 /* クエリ集に保存 */
