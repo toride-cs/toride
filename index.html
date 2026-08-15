@@ -1206,6 +1206,25 @@ body.edit #editBanner { display: flex; }
 .tool-ref-item a { color: var(--md-primary); text-decoration: none; word-break: break-all; }
 .tool-ref-item a:hover { text-decoration: underline; }
 
+/* methodology — 資格タブの追加/削除 */
+.meth-cert-del { display: inline-grid; place-items: center; width: 17px; height: 17px; margin-left: 6px; border-radius: 4px; opacity: .4; vertical-align: middle; transition: opacity .12s, background .12s, color .12s; }
+.tool-cert-tab:hover .meth-cert-del { opacity: .7; }
+.meth-cert-del:hover { opacity: 1; color: var(--md-error); background: var(--md-surface-2); }
+.tool-cert-tab.meth-cert-add { color: var(--md-on-surface-var); padding: 9px 12px; }
+.tool-cert-tab.meth-cert-add:hover { color: var(--md-primary); background: var(--md-surface-2); }
+
+/* commands — 便利コマンド集 */
+.cmd-card { gap: 10px; }
+.cmd-card-acts { display: inline-flex; gap: 5px; margin-left: auto; }
+.cmd-desc { font-size: 13px; color: var(--md-on-surface-var); line-height: 1.65; background: var(--md-surface-2); border-radius: 8px; padding: 9px 12px; }
+.cmd-desc .md-inline { font-family: var(--font-mono); font-size: 11.5px; background: var(--code-block-bg); color: var(--code-block-fg); border-radius: 4px; padding: 1px 5px; }
+.cmd-variants { display: flex; flex-direction: column; gap: 12px; }
+.cmd-variant { display: flex; flex-direction: column; gap: 5px; }
+.cmd-variant-dim { opacity: .5; }
+.cmd-variant-head { display: flex; align-items: center; gap: 8px; }
+.cmd-variant-acts { display: inline-flex; gap: 4px; margin-left: auto; }
+.cmd-os-badge { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--os, #7d9186); background: color-mix(in srgb, var(--os, #7d9186) 14%, transparent); border: 1px solid color-mix(in srgb, var(--os, #7d9186) 35%, transparent); border-radius: 5px; padding: 2px 9px; }
+
 /* knowledge */
 .know-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px,1fr)); gap: 14px; }
 .know-card { background: var(--md-surface); border: 1px solid var(--md-outline-var); border-radius: var(--radius-lg); padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; transition: box-shadow .15s, transform .15s; }
@@ -1393,6 +1412,7 @@ body.edit #editBanner { display: flex; }
       <button data-mode="tools" title="ツール・リファレンス"><span class="material-symbols-rounded">build</span><span class="mode-label">ツール</span></button>
       <button data-mode="knowledge" title="ナレッジ・リンク集"><span class="material-symbols-rounded">menu_book</span><span class="mode-label">ナレッジ</span></button>
       <button data-mode="methodology" title="攻略メソドロジー"><span class="material-symbols-rounded">account_tree</span><span class="mode-label">メソドロジー</span></button>
+      <button data-mode="commands" title="便利コマンド集"><span class="material-symbols-rounded">terminal</span><span class="mode-label">コマンド</span></button>
       <span class="mode-group-sep" title="攻撃"></span>
       <button data-mode="logbook" title="攻撃ログブック"><span class="material-symbols-rounded">track_changes</span><span class="mode-label">攻撃ログ</span></button>
       <button data-mode="web" title="Web攻略 (OSWA)"><span class="material-symbols-rounded">language</span><span class="mode-label">Web攻略</span></button>
@@ -1443,5 +1463,6 @@ body.edit #editBanner { display: flex; }
 <script src="knowledge.js"></script>
 <script src="dashboards.js"></script>
 <script src="methodology.js"></script>
+<script src="commands.js"></script>
 </body>
 </html>

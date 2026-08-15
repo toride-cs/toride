@@ -11,7 +11,7 @@
 ════════════════════════════════════════════════════════ */
 
 /* ── STATE ─────────────────────────────────────────── */
-let data       = { tabs: [], machines: [], phases: [], hunts: [], queries: [], targets: [], payloads: [], vulnTypes: [], tools: [], knowledge: [], dashboards: [], methodologies: [] };
+let data       = { tabs: [], machines: [], phases: [], hunts: [], queries: [], targets: [], payloads: [], vulnTypes: [], tools: [], knowledge: [], dashboards: [], methodologies: [], commands: [] };
 let appMode    = "cheatsheet";  // ... | "dashboards" | "methodology"
 let activeId   = null;          // current sheet (tab) id
 let activeCat  = null;          // current category
@@ -70,6 +70,10 @@ let methCert      = "OSCP";     // OSCP | OSWA（資格タブ）
 let methPlaceholders = {};      // { "<IP>": "10.10.10.5", ... } プレースホルダ置換値
 let methChecked   = {};         // { stepId: true } セッション参照用チェック
 let methOpenSections = {};      // { sectionId: true } アコーディオン開閉
+
+/* commands state */
+let cmdCatFilter  = null;       // カテゴリ絞り込み (null=すべて)
+let cmdOsFilter   = "all";      // OS絞り込み (all | Windows | Linux | ...)
 
 /* category presentation metadata (order + icon + description) */
 const CAT_META = {
@@ -157,6 +161,14 @@ const KNOW_KINDS = {
   writeup:    { label: "writeup",    color: "#b085e0" },
 };
 const KNOW_CATEGORIES = ["reference", "methodology", "recon", "web", "xss", "sqli", "ssti", "ssrf", "lfi", "xxe", "idor", "fuzzing", "wordlist", "lab", "その他"];
+
+/* commands constants */
+const COMMAND_CATEGORIES = ["ファイル探索", "列挙 (enum)", "権限昇格", "ネットワーク", "ファイル転送", "シェル / TTY", "AD / Windows", "パスワード / ハッシュ", "その他"];
+const COMMAND_OS = {
+  "Windows": { label: "Windows", color: "#5aa9e0" },
+  "Linux":   { label: "Linux",   color: "#e0a944" },
+  "共通":    { label: "共通",     color: "#3fd07f" },
+};
 
 (async function init() {
   // theme
@@ -416,6 +428,24 @@ function normalizeData() {
     });
     m.ts = m.ts || Date.now();
   });
+
+  // ── コマンド集（新規・後方互換） ──
+  if (!Array.isArray(data.commands)) data.commands = [];
+  data.commands.forEach(c => {
+    c.id = c.id || uid();
+    c.title = c.title || "無題のコマンド";
+    c.category = c.category || "その他";
+    c.desc = c.desc || "";
+    c.tags = Array.isArray(c.tags) ? c.tags : [];
+    c.variants = Array.isArray(c.variants) ? c.variants : [];
+    c.variants.forEach(v => {
+      v.id = v.id || uid();
+      v.os = v.os || "共通";
+      v.cmd = v.cmd || "";
+      v.note = v.note || "";
+    });
+    c.ts = c.ts || Date.now();
+  });
 }
 
 /* categories present in data, ordered */
@@ -471,6 +501,7 @@ function render() {
   if (appMode === "knowledge") { renderKnowledge(); return; }
   if (appMode === "dashboards") { renderDashboards(); return; }
   if (appMode === "methodology") { renderMethodology(); return; }
+  if (appMode === "commands") { renderCommands(); return; }
   renderNav();
   if (searchMode)       renderSearch();
   else if (view === "home") renderHome();
@@ -494,6 +525,7 @@ function setMode(mode) {
   document.body.classList.toggle("mode-knowledge", mode === "knowledge");
   document.body.classList.toggle("mode-dashboards", mode === "dashboards");
   document.body.classList.toggle("mode-methodology", mode === "methodology");
+  document.body.classList.toggle("mode-commands", mode === "commands");
   render();
   document.getElementById("main").scrollTop = 0;
   try { window.scrollTo(0, 0); } catch(e){}
@@ -515,6 +547,7 @@ function syncModeUI() {
       knowledge: "ナレッジ・URL・タグを検索…",
       dashboards: "ダッシュボードを検索…",
       methodology: "手法・ポート・コマンドを検索…",
+      commands: "コマンド・OS・用途を検索…",
       cheatsheet: "コマンド・フィールド・コードを検索…"
     };
     si.placeholder = ph[appMode] ?? ph.cheatsheet;
@@ -798,6 +831,7 @@ function bindGlobalUI() {
     if (appMode === "knowledge") { renderKnowledgeSearch(); return; }
     if (appMode === "dashboards") { renderDashboardsSearch(); return; }
     if (appMode === "methodology") { renderMethodologySearch(); return; }
+    if (appMode === "commands") { renderCommandsSearch(); return; }
     renderNav(); renderSearch();
   });
   document.getElementById("searchClear").onclick = () => { clearSearchInput(); searchMode=false; render(); si.focus(); };
@@ -813,6 +847,7 @@ function bindGlobalUI() {
     else if (appMode === "knowledge") { knowView="list"; knowDetailId=null; searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "dashboards") { searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "methodology") { searchMode=false; clearSearchInput(); render(); }
+    else if (appMode === "commands") { cmdCatFilter=null; cmdOsFilter="all"; searchMode=false; clearSearchInput(); render(); }
     else goHome();
   };
   document.getElementById("brandHome").onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); document.getElementById("brandHome").onclick(); } };

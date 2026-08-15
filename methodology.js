@@ -63,9 +63,10 @@ function renderMethodology() {
   // 資格タブ
   const certTab = (id) => {
     const n = data.methodologies.filter(m=>m.cert===id).reduce((a,m)=>a+m.sections.length,0);
-    return `<button class="tool-cert-tab ${methCert===id?'on':''}" onclick="mSetCert('${id}')">${esc(id)} <span class="badge">${n}節</span></button>`;
+    return `<button class="tool-cert-tab ${methCert===id?'on':''}" onclick="mSetCert('${escAttr(id)}')">${esc(id)} <span class="badge">${n}節</span><span class="meth-cert-del" onclick="event.stopPropagation();mDelCert('${escAttr(id)}')" title="この資格タブを削除"><span class="material-symbols-rounded" style="font-size:13px">close</span></span></button>`;
   };
-  const certTabs = certs.map(certTab).join("");
+  const certTabs = certs.map(certTab).join("")
+    + `<button class="tool-cert-tab meth-cert-add" onclick="mAddCert()" title="資格タブを追加"><span class="material-symbols-rounded" style="font-size:16px">add</span></button>`;
 
   // プレースホルダ置換バー
   const phs = methExtractPlaceholders();
@@ -148,6 +149,38 @@ function renderMethStep(st, mId, sId, idx, total) {
 
 /* 操作 */
 function mSetCert(c){ methCert=c; renderMethodology(); }
+
+/* 資格タブの追加・削除 */
+function mAddCert() {
+  openModal("資格タブを追加",
+    `<label>資格・カテゴリ名</label><input id="mNewCert" placeholder="例: OSEP / OSWE / PNPT / 汎用">
+     <div class="meth-import-hint">新しい資格タブを作成し、空のメソドロジーを用意します。作成後「節を追加」または「JSONで取り込み」で中身を追加できます。</div>`,
+    () => {
+      const name = val("mNewCert").trim();
+      if (!name) { toast("名前を入力してください"); return; }
+      if (data.methodologies.some(m=>m.cert===name)) {
+        methCert = name; renderMethodology();
+        toast(`「${name}」タブに切り替えました（既に存在します）`);
+        return;
+      }
+      data.methodologies.push({ id: uid(), title: `${name} Methodology`, cert: name, sections: [], ts: Date.now() });
+      methCert = name;
+      renderMethodology();
+      toast(`✅ 資格タブ「${name}」を追加しました`);
+    },
+    { okText: "追加" });
+}
+
+function mDelCert(cert) {
+  const secCount = data.methodologies.filter(m=>m.cert===cert).reduce((a,m)=>a+m.sections.length,0);
+  if (!confirm(`資格タブ「${cert}」を削除しますか？\n配下の ${secCount} 節がすべて削除されます。`)) return;
+  data.methodologies = data.methodologies.filter(m=>m.cert!==cert);
+  // 開いていたタブを削除したら別のタブへ退避
+  const remaining = [...new Set(data.methodologies.map(m=>m.cert))];
+  if (methCert === cert) methCert = remaining[0] || "OSCP";
+  renderMethodology();
+  toast(`🗑 資格タブ「${cert}」を削除しました`);
+}
 function mSetPh(ph,v){
   methPlaceholders[ph]=v;
   // 全体再描画するとフォーカスが外れる（1文字ずつ問題）ので、
