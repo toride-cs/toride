@@ -18,7 +18,8 @@
 ════════════════════════════════════════════════════════ */
 
 /* ── 定数 ── */
-const HG_CERTS = ["OSTH", "OSDA"];
+/* 資格タブ（自由編集可・data.huntCerts に保存） */
+function hgCerts() { return (Array.isArray(data.huntCerts) && data.huntCerts.length) ? data.huntCerts : ["OSTH", "OSDA"]; }
 const HG_STATUS = {
   todo: { label: "未着手", color: "#7d9186", cls: "todo" },
   prog: { label: "進行中", color: "#e0a944", cls: "prog" },
@@ -81,12 +82,15 @@ function hgSetCert(c) { hgCert = c; hgView = "list"; hgLogId = null; render(); }
 function hgRenderList() {
   renderHuntNav();
   const main = document.getElementById("main");
+  if (!hgCerts().includes(hgCert)) hgCert = hgCerts()[0];
   const logs = hgLogsForCert();
 
-  const certTabs = HG_CERTS.map(c => {
+  const certTabs = hgCerts().map(c => {
     const n = data.huntLogs.filter(l => l.cert === c).length;
-    return `<button class="tool-cert-tab ${hgCert===c?'on':''}" onclick="hgSetCert('${c}')">${c} <span class="badge">${n}</span></button>`;
-  }).join("");
+    return `<button class="tool-cert-tab ${hgCert===c?'on':''}" onclick="hgSetCert('${escAttr(c)}')">${esc(c)} <span class="badge">${n}</span></button>`;
+  }).join("")
+    + `<button class="tool-cert-tab cert-add" onclick="hgAddCert()" title="タブを追加"><span class="material-symbols-rounded" style="font-size:16px">add</span></button>`
+    + `<button class="tool-cert-tab cert-edit" onclick="hgEditCerts()" title="タブを編集"><span class="material-symbols-rounded" style="font-size:15px">tune</span></button>`;
 
   const done = logs.filter(l => l.status === "done").length;
   const prog = logs.filter(l => l.status === "prog").length;
@@ -363,7 +367,7 @@ function hgDelDrawer(di) { const l = hgLog(); if (!(l.drawers||[])[di]) return; 
 /* ── メタ 編集/追加/削除 ── */
 function hgEditMeta() {
   const l = hgLog(); if (!l) return;
-  const certOpts = HG_CERTS.map(c => `<option value="${c}" ${l.cert===c?'selected':''}>${c}</option>`).join("");
+  const certOpts = hgCerts().map(c => `<option value="${c}" ${l.cert===c?'selected':''}>${c}</option>`).join("");
   const statOpts = Object.keys(HG_STATUS).map(k => `<option value="${k}" ${l.status===k?'selected':''}>${HG_STATUS[k].label}</option>`).join("");
   openModal("ログ情報を編集",
     `<label>名前</label><input id="hgName" value="${esc(l.name)}">
@@ -380,7 +384,7 @@ function hgEditMeta() {
     });
 }
 function hgAddLog() {
-  const certOpts = HG_CERTS.map(c => `<option value="${c}" ${hgCert===c?'selected':''}>${c}</option>`).join("");
+  const certOpts = hgCerts().map(c => `<option value="${c}" ${hgCert===c?'selected':''}>${c}</option>`).join("");
   openModal("ログを追加",
     `<label>名前</label><input id="hgName" placeholder="例: 不審なPowerShell実行のハント">
      <label>資格</label><select id="hgCertSel">${certOpts}</select>
@@ -398,6 +402,66 @@ function hgDelLog(id) {
   if (!confirm(`「${l.name}」を削除しますか？`)) return;
   data.huntLogs = data.huntLogs.filter(x => x.id !== id);
   hgGoLogs(); toast("🗑 削除しました");
+}
+
+/* ── 資格タブの管理（追加・改名・並べ替え・削除） ── */
+function hgAddCert() {
+  openModal("タブを追加",
+    `<label>タブ名（資格・カテゴリ）</label><input id="hgNewCert" placeholder="例: OSDA / SANS / 実務 / 練習">
+     <p class="al-modal-note">ハントログを分類するタブを追加します。OSTH / OSDA 以外も自由に作れます。</p>`,
+    () => {
+      const name = (val("hgNewCert") || "").trim();
+      if (!name) { toast("名前を入力してください"); return; }
+      if (data.huntCerts.includes(name)) { hgCert = name; render(); toast("既に存在するタブに切り替えました"); return; }
+      data.huntCerts.push(name); hgCert = name; hgView = "list"; render();
+      toast(`✅ タブ「${name}」を追加しました`);
+    }, { okText: "追加" });
+}
+function hgEditCerts() {
+  const rows = data.huntCerts.map((c, i) => {
+    const cnt = data.huntLogs.filter(l => l.cert === c).length;
+    return `<div class="web-vtedit-row">
+      <span class="web-vt-name" style="flex:1">${esc(c)}</span>
+      <span class="web-vt-cnt">${cnt} 件</span>
+      <button class="web-vt-act" onclick="hgRenameCert('${escAttr(c)}')">改名</button>
+      <button class="web-vt-act" onclick="hgMoveCert('${escAttr(c)}',-1)" ${i===0?'disabled':''}>↑</button>
+      <button class="web-vt-act" onclick="hgMoveCert('${escAttr(c)}',1)" ${i===data.huntCerts.length-1?'disabled':''}>↓</button>
+      <button class="web-vt-act danger" onclick="hgDelCert('${escAttr(c)}')">削除</button>
+    </div>`;
+  }).join("");
+  openModal("タブを編集",
+    `<div class="web-vtedit-list">${rows}</div>
+     <button class="web-vt-add" onclick="hgAddCert()"><span class="material-symbols-rounded" style="font-size:16px">add</span>タブを追加</button>
+     <p class="web-vtedit-note">改名するとそのタブのログもまとめて移動します。ログのあるタブを削除すると、ログは先頭のタブへ移動します。</p>`,
+    null, { okText: "閉じる", onOk: () => { closeModal(); if (appMode === "hunt") render(); } });
+}
+function hgRenameCert(oldName) {
+  const name = (prompt("新しいタブ名", oldName) || "").trim();
+  if (!name || name === oldName) return;
+  if (data.huntCerts.includes(name)) { toast("同名のタブが既にあります"); return; }
+  const i = data.huntCerts.indexOf(oldName); if (i < 0) return;
+  data.huntCerts[i] = name;
+  data.huntLogs.forEach(l => { if (l.cert === oldName) l.cert = name; });
+  if (hgCert === oldName) hgCert = name;
+  hgEditCerts();
+}
+function hgMoveCert(name, dir) {
+  const i = data.huntCerts.indexOf(name); const j = i + dir;
+  if (i < 0 || j < 0 || j >= data.huntCerts.length) return;
+  [data.huntCerts[i], data.huntCerts[j]] = [data.huntCerts[j], data.huntCerts[i]];
+  hgEditCerts();
+}
+function hgDelCert(name) {
+  if (data.huntCerts.length <= 1) { toast("最低1つのタブが必要です"); return; }
+  const cnt = data.huntLogs.filter(l => l.cert === name).length;
+  const dest = data.huntCerts.find(c => c !== name);
+  const msg = cnt > 0 ? `「${name}」を削除します。${cnt}件のログは「${dest}」へ移動します。よろしいですか？`
+                      : `タブ「${name}」を削除しますか？`;
+  if (!confirm(msg)) return;
+  data.huntLogs.forEach(l => { if (l.cert === name) l.cert = dest; });
+  data.huntCerts = data.huntCerts.filter(c => c !== name);
+  if (hgCert === name) hgCert = data.huntCerts[0];
+  hgEditCerts();
 }
 
 /* ═══════════════════════════════════════════════════
@@ -485,7 +549,7 @@ function hgCoerceLog(o) {
   const phaseIds = new Set(data.huntPhases.map(p => p.id));
   const langOk = new Set(QUERY_LANGS);
   const verdictOk = new Set(HUNT_VERDICTS.map(v => v.id));
-  const cert = (o.cert === "OSDA") ? "OSDA" : "OSTH";
+  const cert = (typeof o.cert === "string" && o.cert.trim()) ? o.cert.trim() : (hgCerts()[0] || "OSTH");
   const validStatus = { todo: 1, prog: 1, done: 1 };
   const steps = Array.isArray(o.steps) ? o.steps.map(s => ({
     id: uid(),
@@ -512,7 +576,7 @@ function hgCoerceLog(o) {
   };
 }
 function hgImport() {
-  const certOpts = HG_CERTS.map(c => `<option value="${c}" ${hgCert===c?'selected':''}>${c}</option>`).join("");
+  const certOpts = hgCerts().map(c => `<option value="${c}" ${hgCert===c?'selected':''}>${c}</option>`).join("");
   const sample = `{
   "cert": "OSTH",
   "name": "不審なPowerShellのハント",
@@ -543,6 +607,7 @@ function hgImport() {
       const logs = arr.map(o => { const c = hgCoerceLog(o); if (c && !o.cert) c.cert = csel; return c; }).filter(Boolean);
       if (!logs.length) { toast("取り込めるハントログがありません"); return; }
       data.huntLogs.push(...logs);
+      logs.forEach(l => { if (l.cert && !data.huntCerts.includes(l.cert)) data.huntCerts.push(l.cert); });
       hgCert = logs[0].cert;
       if (logs.length === 1) hgOpen(logs[0].id);
       else { hgView = "list"; render(); }

@@ -15,7 +15,8 @@
 ════════════════════════════════════════════════════════ */
 
 /* ── 定数 ── */
-const AL_CERTS = ["OSCP", "OSWA"];
+/* 資格タブ（自由編集可・data.attackCerts に保存） */
+function alCerts() { return (Array.isArray(data.attackCerts) && data.attackCerts.length) ? data.attackCerts : ["OSCP", "OSWA"]; }
 const AL_STATUS = {
   todo:   { label: "未着手",  color: "#7d9186", cls: "todo" },
   prog:   { label: "進行中",  color: "#e0a944", cls: "prog" },
@@ -83,12 +84,15 @@ function alSetCert(c) { alCert = c; alView = "list"; alLogId = null; render(); }
 function alRenderList() {
   alRenderNav();
   const main = document.getElementById("main");
+  if (!alCerts().includes(alCert)) alCert = alCerts()[0];
   const logs = alLogsForCert();
 
-  const certTabs = AL_CERTS.map(c => {
+  const certTabs = alCerts().map(c => {
     const n = data.attackLogs.filter(l => l.cert === c).length;
-    return `<button class="tool-cert-tab ${alCert===c?'on':''}" onclick="alSetCert('${c}')">${c} <span class="badge">${n}</span></button>`;
-  }).join("");
+    return `<button class="tool-cert-tab ${alCert===c?'on':''}" onclick="alSetCert('${escAttr(c)}')">${esc(c)} <span class="badge">${n}</span></button>`;
+  }).join("")
+    + `<button class="tool-cert-tab cert-add" onclick="alAddCert()" title="タブを追加"><span class="material-symbols-rounded" style="font-size:16px">add</span></button>`
+    + `<button class="tool-cert-tab cert-edit" onclick="alEditCerts()" title="タブを編集"><span class="material-symbols-rounded" style="font-size:15px">tune</span></button>`;
 
   const rooted = logs.filter(l => l.status === "rooted").length;
   const prog   = logs.filter(l => l.status === "prog").length;
@@ -339,7 +343,7 @@ function alDelDrawer(di) {
 /* ── メタ編集 / 追加 ── */
 function alEditMeta() {
   const l = alLog(); if (!l) return;
-  const certOpts = AL_CERTS.map(c => `<option value="${c}" ${l.cert===c?'selected':''}>${c}</option>`).join("");
+  const certOpts = alCerts().map(c => `<option value="${c}" ${l.cert===c?'selected':''}>${c}</option>`).join("");
   const statOpts = Object.keys(AL_STATUS).map(k => `<option value="${k}" ${l.status===k?'selected':''}>${AL_STATUS[k].label}</option>`).join("");
   openModal("ログ情報を編集",
     `<label>名前</label><input id="alName" value="${esc(l.name)}">
@@ -361,7 +365,7 @@ function alEditMeta() {
     });
 }
 function alAddLog() {
-  const certOpts = AL_CERTS.map(c => `<option value="${c}" ${alCert===c?'selected':''}>${c}</option>`).join("");
+  const certOpts = alCerts().map(c => `<option value="${c}" ${alCert===c?'selected':''}>${c}</option>`).join("");
   openModal("ログを追加",
     `<label>名前</label><input id="alName" placeholder="例: Target 2">
      <label>資格</label><select id="alCertSel">${certOpts}</select>
@@ -384,6 +388,66 @@ function alDelLog(id) {
   if (!confirm(`「${l.name}」を削除しますか？`)) return;
   data.attackLogs = data.attackLogs.filter(x => x.id !== id);
   alGoLogs(); toast("🗑 削除しました");
+}
+
+/* ── 資格タブの管理（追加・改名・並べ替え・削除） ── */
+function alAddCert() {
+  openModal("タブを追加",
+    `<label>タブ名（資格・カテゴリ）</label><input id="alNewCert" placeholder="例: OSEP / PNPT / HTB / 練習">
+     <p class="al-modal-note">攻略ログを分類するタブを追加します。OSCP / OSWA 以外も自由に作れます。</p>`,
+    () => {
+      const name = (val("alNewCert") || "").trim();
+      if (!name) { toast("名前を入力してください"); return; }
+      if (data.attackCerts.includes(name)) { alCert = name; render(); toast("既に存在するタブに切り替えました"); return; }
+      data.attackCerts.push(name); alCert = name; alView = "list"; render();
+      toast(`✅ タブ「${name}」を追加しました`);
+    }, { okText: "追加" });
+}
+function alEditCerts() {
+  const rows = data.attackCerts.map((c, i) => {
+    const cnt = data.attackLogs.filter(l => l.cert === c).length;
+    return `<div class="web-vtedit-row">
+      <span class="web-vt-name" style="flex:1">${esc(c)}</span>
+      <span class="web-vt-cnt">${cnt} 件</span>
+      <button class="web-vt-act" onclick="alRenameCert('${escAttr(c)}')">改名</button>
+      <button class="web-vt-act" onclick="alMoveCert('${escAttr(c)}',-1)" ${i===0?'disabled':''}>↑</button>
+      <button class="web-vt-act" onclick="alMoveCert('${escAttr(c)}',1)" ${i===data.attackCerts.length-1?'disabled':''}>↓</button>
+      <button class="web-vt-act danger" onclick="alDelCert('${escAttr(c)}')">削除</button>
+    </div>`;
+  }).join("");
+  openModal("タブを編集",
+    `<div class="web-vtedit-list">${rows}</div>
+     <button class="web-vt-add" onclick="alAddCert()"><span class="material-symbols-rounded" style="font-size:16px">add</span>タブを追加</button>
+     <p class="web-vtedit-note">改名するとそのタブのログもまとめて移動します。ログのあるタブを削除すると、ログは先頭のタブへ移動します。</p>`,
+    null, { okText: "閉じる", onOk: () => { closeModal(); if (appMode === "attacklog") render(); } });
+}
+function alRenameCert(oldName) {
+  const name = (prompt("新しいタブ名", oldName) || "").trim();
+  if (!name || name === oldName) return;
+  if (data.attackCerts.includes(name)) { toast("同名のタブが既にあります"); return; }
+  const i = data.attackCerts.indexOf(oldName); if (i < 0) return;
+  data.attackCerts[i] = name;
+  data.attackLogs.forEach(l => { if (l.cert === oldName) l.cert = name; });
+  if (alCert === oldName) alCert = name;
+  alEditCerts();
+}
+function alMoveCert(name, dir) {
+  const i = data.attackCerts.indexOf(name); const j = i + dir;
+  if (i < 0 || j < 0 || j >= data.attackCerts.length) return;
+  [data.attackCerts[i], data.attackCerts[j]] = [data.attackCerts[j], data.attackCerts[i]];
+  alEditCerts();
+}
+function alDelCert(name) {
+  if (data.attackCerts.length <= 1) { toast("最低1つのタブが必要です"); return; }
+  const cnt = data.attackLogs.filter(l => l.cert === name).length;
+  const dest = data.attackCerts.find(c => c !== name);
+  const msg = cnt > 0 ? `「${name}」を削除します。${cnt}件のログは「${dest}」へ移動します。よろしいですか？`
+                      : `タブ「${name}」を削除しますか？`;
+  if (!confirm(msg)) return;
+  data.attackLogs.forEach(l => { if (l.cert === name) l.cert = dest; });
+  data.attackCerts = data.attackCerts.filter(c => c !== name);
+  if (alCert === name) alCert = data.attackCerts[0];
+  alEditCerts();
 }
 
 /* ═══════════════════════════════════════════════════
@@ -518,7 +582,7 @@ const AL_IMPORT_SAMPLE = `{
 function alCoerceLog(o) {
   if (!o || typeof o !== "object") return null;
   const phaseIds = new Set(data.phases.map(p => p.id));
-  const cert = (o.cert === "OSWA") ? "OSWA" : "OSCP";
+  const cert = (typeof o.cert === "string" && o.cert.trim()) ? o.cert.trim() : (alCerts()[0] || "OSCP");
   const validStatus = { todo: 1, prog: 1, rooted: 1 };
   const steps = Array.isArray(o.steps) ? o.steps.map(s => ({
     id: uid(),
@@ -563,6 +627,7 @@ function alImport() {
       const logs = arr.map(alCoerceLog).filter(Boolean);
       if (!logs.length) { toast("取り込める攻略ログがありません"); return; }
       data.attackLogs.push(...logs);
+      logs.forEach(l => { if (l.cert && !data.attackCerts.includes(l.cert)) data.attackCerts.push(l.cert); });
       alCert = logs[0].cert;
       if (logs.length === 1) alOpen(logs[0].id);
       else { alView = "list"; render(); }

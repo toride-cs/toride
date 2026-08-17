@@ -11,7 +11,7 @@
 ════════════════════════════════════════════════════════ */
 
 /* ── STATE ─────────────────────────────────────────── */
-let data       = { tabs: [], attackLogs: [], machines: [], phases: [], huntLogs: [], huntPhases: [], hunts: [], queries: [], targets: [], payloads: [], vulnTypes: [], tools: [], knowledge: [], dashboards: [], methodologies: [], commands: [] };
+let data       = { tabs: [], attackLogs: [], attackCerts: [], machines: [], phases: [], huntLogs: [], huntCerts: [], huntPhases: [], hunts: [], queries: [], targets: [], payloads: [], vulnTypes: [], tools: [], knowledge: [], dashboards: [], methodologies: [], commands: [] };
 let appMode    = "cheatsheet";  // ... | "dashboards" | "methodology"
 let activeId   = null;          // current sheet (tab) id
 let activeCat  = null;          // current category
@@ -107,6 +107,9 @@ const DEFAULT_HUNT_PHASES = [
   { id: "detect",   label: "検知",  color: "#e05c5c" },
   { id: "respond",  label: "対応",  color: "#3fd07f" },
 ];
+
+const DEFAULT_ATTACK_CERTS = ["OSCP", "OSWA"];
+const DEFAULT_HUNT_CERTS   = ["OSTH", "OSDA"];
 
 /* threat-hunting constants */
 const HUNT_STAGES = [
@@ -283,9 +286,16 @@ function normalizeData() {
     });
   }
 
+  // 資格タブ（自由編集可）。既定は OSCP / OSWA
+  if (!Array.isArray(data.attackCerts) || !data.attackCerts.length) {
+    data.attackCerts = DEFAULT_ATTACK_CERTS.slice();
+  }
+  data.attackCerts = data.attackCerts.map(c => String(c).trim()).filter(Boolean);
+  if (!data.attackCerts.length) data.attackCerts = DEFAULT_ATTACK_CERTS.slice();
+
   data.attackLogs.forEach(l => {
     l.id = l.id || uid();
-    l.cert = (l.cert === "OSWA") ? "OSWA" : (l.cert || "OSCP");
+    l.cert = (typeof l.cert === "string" && l.cert.trim()) ? l.cert.trim() : (data.attackCerts[0] || "OSCP");
     l.name = l.name || "無名ターゲット";
     l.ip = l.ip || ""; l.os = l.os || "";
     l.status = l.status || "prog";
@@ -301,6 +311,8 @@ function normalizeData() {
     l.drawers = Array.isArray(l.drawers) ? l.drawers : [];
     l.drawers.forEach(d => { d.id = d.id || uid(); d.signal = d.signal || ""; d.action = d.action || ""; d.ref = d.ref || l.name; });
   });
+  // ログが持つ cert をタブに取り込む（消えたタブの復活）
+  data.attackLogs.forEach(l => { if (l.cert && !data.attackCerts.includes(l.cert)) data.attackCerts.push(l.cert); });
 
   if (!Array.isArray(data.machines)) data.machines = [];
   data.machines.forEach(m => {
@@ -364,11 +376,17 @@ function normalizeData() {
     });
   }
 
+  if (!Array.isArray(data.huntCerts) || !data.huntCerts.length) {
+    data.huntCerts = DEFAULT_HUNT_CERTS.slice();
+  }
+  data.huntCerts = data.huntCerts.map(c => String(c).trim()).filter(Boolean);
+  if (!data.huntCerts.length) data.huntCerts = DEFAULT_HUNT_CERTS.slice();
+
   const hgLangOk = new Set(QUERY_LANGS);
   const hgVerdictOk = new Set(HUNT_VERDICTS.map(v => v.id));
   data.huntLogs.forEach(l => {
     l.id = l.id || uid();
-    l.cert = (l.cert === "OSDA") ? "OSDA" : (l.cert || "OSTH");
+    l.cert = (typeof l.cert === "string" && l.cert.trim()) ? l.cert.trim() : (data.huntCerts[0] || "OSTH");
     l.name = l.name || "無題のハント";
     l.scope = l.scope || "";
     l.status = ["todo","prog","done"].includes(l.status) ? l.status : "prog";
@@ -386,6 +404,7 @@ function normalizeData() {
     l.drawers = Array.isArray(l.drawers) ? l.drawers : [];
     l.drawers.forEach(d => { d.id = d.id || uid(); d.signal = d.signal || ""; d.action = d.action || ""; d.ref = d.ref || l.name; });
   });
+  data.huntLogs.forEach(l => { if (l.cert && !data.huntCerts.includes(l.cert)) data.huntCerts.push(l.cert); });
 
   // ── スレットハンティング（新規・後方互換） ──
   if (!Array.isArray(data.hunts)) data.hunts = [];
