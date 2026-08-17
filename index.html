@@ -1447,6 +1447,70 @@ body.edit #editBanner { display: flex; }
   .al-dc-arrow{transform:rotate(90deg);justify-self:start}
   .al-step{grid-template-columns:1fr}.al-step-side{flex-direction:row;align-items:center}
 }
+
+/* ── カード削除ボタン ── */
+.al-card-del{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;color:var(--md-on-surface-var);background:none;border:none;cursor:pointer;opacity:0;transition:.12s}
+.al-card:hover .al-card-del{opacity:1}
+.al-card-del:hover{background:rgba(224,104,95,.14);color:var(--md-error)}
+.al-card-del .material-symbols-rounded{font-size:17px}
+
+/* ── 要約(TL;DR) ── */
+.al-summary{position:relative;padding-right:44px}
+.al-summary-edit{position:absolute;top:10px;right:10px;width:28px;height:28px;border-radius:7px;display:grid;place-items:center;color:var(--md-on-surface-var);background:none;border:1px solid var(--md-outline-var);cursor:pointer}
+.al-summary-edit:hover{color:var(--md-primary);border-color:var(--md-primary)}
+.al-summary-edit .material-symbols-rounded{font-size:15px}
+.al-summary-text{margin-top:2px}
+
+/* ── ステップ記入フォーム ── */
+.al-composer{background:var(--md-surface-container);border:1px solid var(--md-outline-var);border-radius:14px;padding:14px 15px;margin-bottom:22px}
+.al-composer-head{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.al-composer-title{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:14px}
+.al-composer-title .material-symbols-rounded{font-size:19px;color:var(--md-primary)}
+.al-composer-sub{font-family:var(--font-mono);font-size:11px;color:var(--md-on-surface-var)}
+.al-composer-phases{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.al-cphase{font-family:var(--font-mono);font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;border:1px solid var(--md-outline-var);color:var(--md-on-surface-var);background:none;cursor:pointer;transition:.12s}
+.al-cphase:hover{border-color:var(--pc);color:var(--pc)}
+.al-cphase.on{background:color-mix(in srgb,var(--pc) 18%,transparent);border-color:var(--pc);color:var(--pc)}
+.al-cmp-cmd{width:100%;background:var(--md-surface-dim);border:1px solid var(--md-outline-var);border-radius:10px;padding:11px 13px;font-family:var(--font-mono);font-size:13px;line-height:1.6;outline:none;resize:vertical;color:inherit}
+.al-cmp-cmd:focus{border-color:var(--md-primary)}
+.al-cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.al-cmp-in{background:var(--md-surface-dim);border:1px solid var(--md-outline-var);border-radius:10px;padding:10px 13px;font-size:13px;outline:none;color:inherit}
+.al-cmp-in:focus{border-color:var(--md-primary)}
+.al-cmp-out{width:100%;margin-top:8px;background:var(--md-surface-dim);border:1px solid var(--md-outline-var);border-radius:10px;padding:9px 13px;font-family:var(--font-mono);font-size:12px;line-height:1.5;outline:none;resize:vertical;color:inherit}
+.al-cmp-out:focus{border-color:var(--md-primary)}
+.al-cmp-actions{display:flex;justify-content:flex-end;margin-top:11px}
+.al-cmp-add{display:inline-flex;align-items:center;gap:6px;background:var(--md-primary-container);color:var(--md-on-primary-container);font-weight:700;font-size:13px;padding:10px 20px;border-radius:10px;border:none;cursor:pointer}
+.al-cmp-add:hover{filter:brightness(1.06)}
+.al-cmp-add .material-symbols-rounded{font-size:18px}
+
+/* ── 記録ヘッダ ── */
+.al-steps-head{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:6px}
+.al-steps-title{font-size:15px;font-weight:700;white-space:nowrap}
+.al-steps-head .th-vchips{margin-bottom:0}
+
+/* ── ステップのアクション ── */
+.al-step-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center}
+.al-act-btn{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-family:var(--font-mono);color:var(--md-on-surface-var);background:var(--md-surface-container);border:1px solid var(--md-outline-var);border-radius:8px;padding:5px 11px;cursor:pointer;transition:.12s}
+.al-act-btn:hover{color:var(--md-on-surface);border-color:var(--md-outline)}
+.al-act-btn.edit{color:var(--md-primary);border-color:color-mix(in srgb,var(--md-primary) 40%,var(--md-outline-var))}
+.al-act-btn.edit:hover{background:var(--md-primary-container);color:var(--md-on-primary-container)}
+.al-act-btn .material-symbols-rounded{font-size:15px}
+.al-act-ico{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:var(--md-on-surface-var);background:var(--md-surface-container);border:1px solid var(--md-outline-var);cursor:pointer}
+.al-act-ico:hover{color:var(--md-on-surface);border-color:var(--md-outline)}
+.al-act-ico:disabled{opacity:.3;cursor:default}
+.al-act-ico.danger:hover{background:rgba(224,104,95,.14);color:var(--md-error);border-color:var(--md-error)}
+.al-act-ico .material-symbols-rounded{font-size:16px}
+
+.al-empty-steps{display:flex;align-items:center;gap:10px;justify-content:center;padding:36px 20px;color:var(--md-on-surface-var);font-size:13px;border:1px dashed var(--md-outline-var);border-radius:12px}
+.al-empty-steps .material-symbols-rounded{font-size:22px;opacity:.6}
+.al-empty-steps b{color:var(--md-on-surface)}
+
+/* ── サイドのボタン ── */
+.al-side-btn{display:flex;align-items:center;gap:7px;width:100%;justify-content:center;margin-top:8px;font-size:12.5px;font-weight:600;color:var(--md-on-surface-var);background:var(--md-surface-dim);border:1px solid var(--md-outline-var);border-radius:9px;padding:9px 12px;cursor:pointer;transition:.12s}
+.al-side-btn:hover{color:var(--md-on-surface);border-color:var(--md-outline)}
+.al-side-btn.danger:hover{background:rgba(224,104,95,.12);color:var(--md-error);border-color:var(--md-error)}
+
+@media(max-width:840px){ .al-cmp-grid{grid-template-columns:1fr} }
 </style>
 </head>
 <body>

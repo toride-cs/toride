@@ -101,6 +101,7 @@ function alRenderList() {
         <div class="al-card-top">
           <span class="al-status ${st.cls}">${st.label}</span>
           <span class="al-card-cert">${esc(l.cert)}</span>
+          <button class="al-card-del" onclick="event.stopPropagation();alDelLog('${l.id}')" title="このログを削除"><span class="material-symbols-rounded">delete</span></button>
         </div>
         <h3 class="al-card-name">${esc(l.name)}</h3>
         ${l.ip ? `<div class="al-card-ip">${esc(l.ip)}</div>` : ""}
@@ -141,16 +142,18 @@ function alRenderDetail() {
   const st = alStatusMeta(l.status);
 
   const curP = alInputPhase || data.phases[0]?.id || "";
-  const cpm = alPhase(curP);
-  const phaseMenu = data.phases.map(p => `<button class="al-vt-opt" onclick="alSetInputPhase('${p.id}')" style="color:${p.color}">[${esc(p.label)}]</button>`).join("");
 
-  // フェーズ別カウント
+  // フェーズ別カウント（フィルタ用）
   const counts = {};
   l.steps.forEach(s => counts[s.phase || "__none"] = (counts[s.phase || "__none"] || 0) + 1);
   const phaseTabs = data.phases.map(p => `
     <button class="th-vchip ${alPhaseFilter===p.id?'on':''}" onclick="alSetPhaseFilter('${p.id}')" style="${alPhaseFilter===p.id?`border-color:${p.color};color:${p.color}`:''}">${esc(p.label)} <span class="cnt">${counts[p.id]||0}</span></button>`).join("");
   const noneCount = counts["__none"] || 0;
   const noneTab = noneCount ? `<button class="th-vchip ${alPhaseFilter==='__none'?'on':''}" onclick="alSetPhaseFilter('__none')">未分類 <span class="cnt">${noneCount}</span></button>` : "";
+
+  // 記入フォームのフェーズ選択チップ（クリックで選択・再描画なし）
+  const composerPhases = data.phases.map(p =>
+    `<button class="al-cphase ${curP===p.id?'on':''}" data-ph="${p.id}" onclick="alPickComposerPhase('${p.id}')" style="--pc:${p.color}">${esc(p.label)}</button>`).join("");
 
   // ステップ一覧
   let items = l.steps.map((x, i) => ({ x, i }));
@@ -173,15 +176,15 @@ function alRenderDetail() {
           ${x.aim ? `<div class="al-line aim"><span class="material-symbols-rounded ic">target</span><span>${esc(x.aim)}</span></div>` : ""}
           ${x.learning && x.learning !== "—" ? `<div class="al-line learn"><span class="material-symbols-rounded ic">lightbulb</span><span>${esc(x.learning)}</span></div>` : ""}
           <div class="al-step-acts">
-            <button class="al-to-drawer" onclick="alStepToDrawer(${i})" title="引き出しに昇格"><span class="material-symbols-rounded">bolt</span>引き出しに追加</button>
-            <button class="th-step-edit" onclick="alMoveStep(${i},-1)" title="上へ" ${i===0?'disabled':''}><span class="material-symbols-rounded">arrow_upward</span></button>
-            <button class="th-step-edit" onclick="alMoveStep(${i},1)" title="下へ" ${i===l.steps.length-1?'disabled':''}><span class="material-symbols-rounded">arrow_downward</span></button>
-            <button class="th-step-edit" onclick="alEditStep(${i})" title="編集"><span class="material-symbols-rounded">edit</span></button>
-            <button class="th-step-del" onclick="alDelStep(${i})" title="削除"><span class="material-symbols-rounded">delete</span></button>
+            <button class="al-act-btn edit" onclick="alEditStep(${i})"><span class="material-symbols-rounded">edit</span>編集</button>
+            <button class="al-act-btn" onclick="alStepToDrawer(${i})"><span class="material-symbols-rounded">bolt</span>引き出しに追加</button>
+            <button class="al-act-ico" onclick="alMoveStep(${i},-1)" title="上へ" ${i===0?'disabled':''}><span class="material-symbols-rounded">arrow_upward</span></button>
+            <button class="al-act-ico" onclick="alMoveStep(${i},1)" title="下へ" ${i===l.steps.length-1?'disabled':''}><span class="material-symbols-rounded">arrow_downward</span></button>
+            <button class="al-act-ico danger" onclick="alDelStep(${i})" title="削除"><span class="material-symbols-rounded">delete</span></button>
           </div>
         </div>
       </div>`;
-  }).join("") : `<div class="th-empty-tl">まだステップがありません。下の入力欄から1行ずつ記録しましょう。</div>`;
+  }).join("") : `<div class="al-empty-steps"><span class="material-symbols-rounded">edit_note</span>まだステップがありません。<b>上の「ステップを記録」</b>から追加します。</div>`;
 
   main.innerHTML = `
     <div class="al-td">
@@ -195,69 +198,93 @@ function alRenderDetail() {
           <span>OS: <b>${esc(l.os)||"—"}</b></span>
         </div>
 
-        <div class="al-summary"><span class="al-summary-lbl">キルチェーン要約 (TL;DR)</span>${esc(l.summary) || "（未記入）情報を編集から書けます"}</div>
-
-        <div class="al-quick">
-          <button class="al-phase-pick" onclick="alTogglePhaseMenu(event)" style="color:${cpm?.color||'var(--md-primary)'}">[${esc(cpm?.label||"phase")}] ▾
-            <div class="al-vt-menu" id="alPhaseMenu">${phaseMenu}</div>
-          </button>
-          <input id="alQuickInput" placeholder="コマンド → 狙い ⇒ 学び  （例: gobuster ... → 入口を探す ⇒ admin/login が候補）" onkeydown="if(event.key==='Enter')alQuickAdd()">
-          <button class="al-go" onclick="alQuickAdd()">記録</button>
+        <div class="al-summary">
+          <span class="al-summary-lbl">キルチェーン要約 (TL;DR)</span>
+          <button class="al-summary-edit" onclick="alEditSummary()" title="要約を編集"><span class="material-symbols-rounded">edit</span></button>
+          <div class="al-summary-text">${esc(l.summary) || "（未記入）右上の鉛筆から書けます"}</div>
         </div>
-        <div class="al-quick-hint">左でフェーズ選択。<b>→</b> の後ろが「狙い・理由」、<b>⇒</b> の後ろが「学び」。出力や生リクエストはステップの<b>編集</b>から貼れます。</div>
 
-        <div class="th-vchips">
-          <button class="th-vchip ${!alPhaseFilter?'on':''}" onclick="alSetPhaseFilter(null)">すべて <span class="cnt">${l.steps.length}</span></button>
-          ${phaseTabs}${noneTab}
-          <button class="al-phase-edit" onclick="alEditPhases()"><span class="material-symbols-rounded" style="font-size:15px">tune</span>フェーズ編集</button>
+        <!-- ステップ記入フォーム（常時表示・矢印不要） -->
+        <div class="al-composer">
+          <div class="al-composer-head">
+            <span class="al-composer-title"><span class="material-symbols-rounded">add_circle</span>ステップを記録</span>
+            <span class="al-composer-sub">フェーズを選んで記入 → 追加</span>
+          </div>
+          <div class="al-composer-phases" id="alComposerPhases">${composerPhases}</div>
+          <textarea id="alCmpCmd" class="al-cmp-cmd" rows="2" placeholder="コマンド / 生HTTPリクエストを貼り付け（Ctrl+Enter で追加）" onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter')alComposerAdd()"></textarea>
+          <div class="al-cmp-grid">
+            <input id="alCmpAim" class="al-cmp-in" placeholder="🎯 狙い・理由（なぜこの一手か）">
+            <input id="alCmpLearn" class="al-cmp-in" placeholder="💡 学び（次に活かす気づき）">
+          </div>
+          <textarea id="alCmpOut" class="al-cmp-out" rows="1" placeholder="出力・レスポンス（任意）"></textarea>
+          <div class="al-cmp-actions">
+            <button class="al-cmp-add" onclick="alComposerAdd()"><span class="material-symbols-rounded">add</span>ステップを追加</button>
+          </div>
+        </div>
+
+        <div class="al-steps-head">
+          <span class="al-steps-title">記録（${l.steps.length}）</span>
+          <div class="th-vchips">
+            <button class="th-vchip ${!alPhaseFilter?'on':''}" onclick="alSetPhaseFilter(null)">すべて</button>
+            ${phaseTabs}${noneTab}
+            <button class="al-phase-edit" onclick="alEditPhases()"><span class="material-symbols-rounded" style="font-size:15px">tune</span>フェーズ編集</button>
+          </div>
         </div>
 
         <div class="al-steps">${timeline}</div>
       </div>
       <div class="al-td-side">
         <div class="th-side-sec"><h4>ログ情報</h4>
+          <div class="th-kv"><span class="k">資格</span><span class="v">${esc(l.cert)}</span></div>
           <div class="th-kv"><span class="k">IP</span><span class="v">${esc(l.ip)||"—"}</span></div>
           <div class="th-kv"><span class="k">OS</span><span class="v">${esc((l.os))||"—"}</span></div>
           <div class="th-kv"><span class="k">状態</span><span class="v" style="color:${st.color}">${st.label}</span></div>
           <div class="th-kv"><span class="k">ステップ</span><span class="v">${l.steps.length}</span></div>
-          <button class="th-side-mini" onclick="alEditMeta()"><span class="material-symbols-rounded" style="font-size:14px">edit</span>情報を編集</button>
+          <button class="al-side-btn" onclick="alEditMeta()"><span class="material-symbols-rounded" style="font-size:15px">edit</span>情報を編集</button>
+          <button class="al-side-btn danger" onclick="alDelLog('${l.id}')"><span class="material-symbols-rounded" style="font-size:15px">delete</span>このログを削除</button>
         </div>
         <div class="th-side-sec"><h4>フラグ (local / proof)</h4>
           <div class="al-flag ${l.localTxt?'got':''}"><span class="lbl">🚩 local</span><span class="val">${esc(l.localTxt)||"未取得"}</span></div>
           <div class="al-flag ${l.proofTxt?'got':''}"><span class="lbl">🚩 proof</span><span class="val">${esc(l.proofTxt)||"未取得"}</span></div>
         </div>
         <div class="th-side-sec"><h4>引き出し（この攻略）</h4>
-          <div class="al-side-drawers">${(l.drawers||[]).length ? (l.drawers||[]).map((d,di)=>`<div class="al-side-drawer"><span class="sig">${esc(d.signal)}</span><button class="al-side-drawer-del" onclick="alDelDrawer(${di})" title="削除"><span class="material-symbols-rounded" style="font-size:13px">close</span></button></div>`).join("") : "<span style='color:var(--md-on-surface-var);font-size:12px'>—</span>"}</div>
-        </div>
-        <div class="th-side-sec"><h4>出力</h4>
-          <button class="web-report-btn" onclick="alExportJson()"><span class="material-symbols-rounded" style="font-size:16px">data_object</span>JSON をコピー</button>
-          <button class="web-report-btn" onclick="alExportMd()" style="margin-top:6px"><span class="material-symbols-rounded" style="font-size:16px">download</span>Markdown を書き出す</button>
+          <div class="al-side-drawers">${(l.drawers||[]).length ? (l.drawers||[]).map((d,di)=>`<div class="al-side-drawer"><span class="sig">${esc(d.signal)||"（兆候未記入）"}</span><button class="al-side-drawer-del" onclick="alDelDrawer(${di})" title="削除"><span class="material-symbols-rounded" style="font-size:13px">close</span></button></div>`).join("") : "<span style='color:var(--md-on-surface-var);font-size:12px'>各ステップの「引き出しに追加」で登録</span>"}</div>
         </div>
       </div>
     </div>
   `;
 }
 
-/* ── クイック入力 ── */
-function alSetInputPhase(id) { alInputPhase = id; document.getElementById("alPhaseMenu")?.classList.remove("open"); alRenderDetail(); }
-function alTogglePhaseMenu(e) { e.stopPropagation(); document.getElementById("alPhaseMenu")?.classList.toggle("open"); }
+/* ── フィルタ / 記入フォーム ── */
 function alSetPhaseFilter(id) { alPhaseFilter = id; alRenderDetail(); }
-document.addEventListener("click", () => document.getElementById("alPhaseMenu")?.classList.remove("open"));
 
-function alQuickAdd() {
-  const l = alLog(); const inp = document.getElementById("alQuickInput");
-  if (!inp) return;
-  const raw = inp.value.trim(); if (!raw || !l) return;
-  let phase = alInputPhase || data.phases[0]?.id || "";
-  let command = raw, aim = "", learning = "";
-  const p2 = raw.split(/\s*⇒\s*/); if (p2.length >= 2) { learning = p2.slice(1).join(" ⇒ ").trim(); command = p2[0]; }
-  const p1 = command.split(/\s*(?:→|->)\s*/); if (p1.length >= 2) { aim = p1.slice(1).join(" → ").trim(); command = p1[0].trim(); }
-  l.steps.push({ id: uid(), phase, command: command.trim(), output: "", aim, learning: "", ts: Date.now() });
-  if (learning) l.steps[l.steps.length-1].learning = learning;
-  inp.value = "";
+/* フォームのフェーズ選択：再描画せずチップの見た目だけ更新（入力保持のため） */
+function alPickComposerPhase(id) {
+  alInputPhase = id;
+  document.querySelectorAll("#alComposerPhases .al-cphase").forEach(b => b.classList.toggle("on", b.dataset.ph === id));
+}
+
+/* 記入フォームから1ステップ追加 */
+function alComposerAdd() {
+  const l = alLog(); if (!l) return;
+  const cmd   = (document.getElementById("alCmpCmd")?.value   || "").trim();
+  const aim   = (document.getElementById("alCmpAim")?.value   || "").trim();
+  const learn = (document.getElementById("alCmpLearn")?.value || "").trim();
+  const out   = (document.getElementById("alCmpOut")?.value   || "").trim();
+  if (!cmd && !aim && !out) { toast("コマンドか狙いを入力してください"); return; }
+  const phase = alInputPhase || data.phases[0]?.id || "";
+  l.steps.push({ id: uid(), phase, command: cmd, output: out, aim, learning: learn, ts: Date.now() });
   if (l.status === "todo") l.status = "prog";
   alRenderDetail();
-  setTimeout(() => document.getElementById("alQuickInput")?.focus(), 30);
+  setTimeout(() => document.getElementById("alCmpCmd")?.focus(), 30);
+}
+
+/* 要約(TL;DR)だけを手早く編集 */
+function alEditSummary() {
+  const l = alLog(); if (!l) return;
+  openModal("キルチェーン要約 (TL;DR) を編集",
+    `<label>要約</label><textarea id="alSumOnly" style="min-height:120px" placeholder="全体の流れを1〜数行で">${esc(l.summary)}</textarea>`,
+    () => { l.summary = val("alSumOnly"); alRenderDetail(); toast("✅ 更新しました"); });
 }
 
 function alEditStep(i) {
@@ -460,44 +487,6 @@ function alPhaseDelete(id) {
   alEditPhases();
 }
 
-/* ═══════════════════════════════════════════════════
-   Markdown 書き出し
-════════════════════════════════════════════════════ */
-function alBuildMarkdown(l) {
-  let md = `# ${l.name} — ${l.cert} 攻略ログ\n\n`;
-  md += `- **IP:** ${l.ip || "—"}\n- **OS:** ${l.os || "—"}\n- **Tags:** ${(l.tags||[]).join(", ") || "—"}\n`;
-  md += `- **local.txt:** ${l.localTxt || "—"}\n- **proof.txt:** ${l.proofTxt || "—"}\n\n`;
-  if (l.summary) md += `## キルチェーン要約\n\n${l.summary}\n\n`;
-  const used = data.phases.filter(p => l.steps.some(s => s.phase === p.id));
-  const groups = used.concat([{ id: "__none", label: "未分類" }]);
-  groups.forEach(p => {
-    const steps = l.steps.filter(s => (s.phase || "__none") === p.id);
-    if (!steps.length) return;
-    md += `## [${p.label}]\n\n`;
-    steps.forEach(s => {
-      if (s.command) md += `\`\`\`\n${s.command}\n\`\`\`\n`;
-      if (s.output) md += `> ${s.output.replace(/\n/g, "\n> ")}\n\n`;
-      if (s.aim) md += `- 🎯 ${s.aim}\n`;
-      if (s.learning && s.learning !== "—") md += `- 💡 ${s.learning}\n`;
-      md += `\n`;
-    });
-  });
-  if ((l.drawers || []).length) {
-    md += `## 引き出し（兆候 → 次の一手）\n\n`;
-    l.drawers.forEach(d => md += `- **${d.signal}** → ${d.action}\n`);
-    md += `\n`;
-  }
-  return md;
-}
-function alExportMd() {
-  const l = alLog(); if (!l) return;
-  const md = alBuildMarkdown(l);
-  const name = `${l.cert}_${(l.name||"log").replace(/\s+/g, "_").slice(0, 30)}_${new Date().toISOString().slice(0,10)}`;
-  const a = Object.assign(document.createElement("a"), {
-    href: URL.createObjectURL(new Blob([md], { type: "text/markdown" })), download: name + ".md" });
-  document.body.appendChild(a); a.click(); a.remove();
-  toast("📥 Markdown を書き出しました");
-}
 
 /* ═══════════════════════════════════════════════════
    JSON インポート
@@ -580,22 +569,6 @@ function alImport() {
       toast(`✅ ${logs.length} 件の攻略ログを取り込みました`);
     },
     { okText: "取り込む" });
-}
-
-/* 現在のログを（id/ts を除いた）クリーンな JSON でコピー＝Claude へ渡して編集依頼できる形 */
-function alBuildExportObj(l) {
-  return {
-    cert: l.cert, name: l.name, ip: l.ip, os: l.os, status: l.status,
-    tags: l.tags || [], summary: l.summary || "",
-    localTxt: l.localTxt || "", proofTxt: l.proofTxt || "",
-    steps: (l.steps || []).map(s => ({ phase: s.phase, command: s.command, output: s.output, aim: s.aim, learning: s.learning })),
-    drawers: (l.drawers || []).map(d => ({ signal: d.signal, action: d.action })),
-  };
-}
-function alExportJson() {
-  const l = alLog(); if (!l) return;
-  copyToClipboard(JSON.stringify(alBuildExportObj(l), null, 2));
-  toast("📋 JSON をコピーしました");
 }
 
 /* ═══════════════════════════════════════════════════════════════════
