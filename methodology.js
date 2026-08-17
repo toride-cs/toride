@@ -7,32 +7,15 @@
 
    「判明した事実 → 次の一手」を線形チェックリストで引く。
    資格タブ(OSCP=ポート軸 / OSWA=状況軸)で切替。
-   プレースホルダ(<IP>等)をその場で一括置換。チェックはセッション参照用。
 
    app.js の共通関数（openModal/toast/esc/uid/copyToClipboard/val）と
-   state（methCert/methPlaceholders/methChecked/methOpenSections）を再利用。
+   state（methCert/methChecked/methOpenSections）を再利用。
 ════════════════════════════════════════════════════════ */
 
 function methForCert() {
   return data.methodologies.filter(m => m.cert === methCert);
 }
 
-/* プレースホルダ (<IP> 等) を検出 */
-function methExtractPlaceholders() {
-  const set = new Set();
-  methForCert().forEach(m => m.sections.forEach(s => s.steps.forEach(st => {
-    (st.command.match(/<[^>]+>/g) || []).forEach(p => set.add(p));
-  })));
-  return [...set];
-}
-/* コマンド内のプレースホルダを置換値で埋める */
-function methApplyPlaceholders(cmd) {
-  let out = cmd;
-  Object.keys(methPlaceholders).forEach(ph => {
-    if (methPlaceholders[ph]) out = out.split(ph).join(methPlaceholders[ph]);
-  });
-  return out;
-}
 
 function renderMethNav() {
   const nav = document.getElementById("navList");
@@ -68,14 +51,6 @@ function renderMethodology() {
   const certTabs = certs.map(certTab).join("")
     + `<button class="tool-cert-tab meth-cert-add" onclick="mAddCert()" title="資格タブを追加"><span class="material-symbols-rounded" style="font-size:16px">add</span></button>`;
 
-  // プレースホルダ置換バー
-  const phs = methExtractPlaceholders();
-  const phBar = phs.length ? `
-    <div class="meth-ph-bar">
-      <span class="meth-ph-label"><span class="material-symbols-rounded" style="font-size:15px">find_replace</span>置換</span>
-      ${phs.map(ph=>`<span class="meth-ph-input"><code>${esc(ph)}</code><input type="text" value="${esc(methPlaceholders[ph]||"")}" placeholder="値" oninput="mSetPh('${esc(ph)}',this.value)"></span>`).join("")}
-    </div>` : "";
-
   // セクション（アコーディオン）
   const sections = [];
   list.forEach(m => {
@@ -108,7 +83,6 @@ function renderMethodology() {
       <button class="th-add" onclick="mAddSection()"><span class="material-symbols-rounded">add</span>節を追加</button>
     </div>
     <div class="tool-cert-tabs">${certTabs}</div>
-    ${phBar}
     <div class="meth-toolbar">
       <button class="meth-tool-btn" onclick="mExpandAll(true)"><span class="material-symbols-rounded" style="font-size:15px">unfold_more</span>すべて開く</button>
       <button class="meth-tool-btn" onclick="mExpandAll(false)"><span class="material-symbols-rounded" style="font-size:15px">unfold_less</span>すべて閉じる</button>
@@ -122,8 +96,7 @@ function renderMethodology() {
 
 function renderMethStep(st, mId, sId, idx, total) {
   const checked = !!methChecked[st.id];
-  const cmd = methApplyPlaceholders(st.command);
-  const hasPh = st.command !== cmd;  // 置換が起きたか
+  const cmd = st.command;
   const canMove = (mId !== undefined && total !== undefined);
   const moveBtns = canMove ? `
             <button class="meth-step-act" onclick="mMoveStep('${mId}','${sId}',${idx},-1)" title="上へ" ${idx===0?'disabled':''}><span class="material-symbols-rounded" style="font-size:13px">arrow_upward</span></button>
@@ -140,7 +113,7 @@ function renderMethStep(st, mId, sId, idx, total) {
             <button class="meth-step-act danger" onclick="mDelStep('${st.id}')" title="削除"><span class="material-symbols-rounded" style="font-size:13px">delete</span></button>
           </span>
         </div>
-        ${st.command?`<pre class="meth-cmd ${hasPh?'resolved':''}" data-stepid="${st.id}" data-rawcmd="${escAttr(st.command)}"><span class="meth-cmd-text">${esc(cmd)}</span><button class="tool-cmd-copy" onclick="event.stopPropagation();copyToClipboard(${escAttr(JSON.stringify(cmd))});toast('📋 コピーしました')" title="コピー"><span class="material-symbols-rounded" style="font-size:14px">content_copy</span></button></pre>`:""}
+        ${st.command?`<pre class="meth-cmd" data-stepid="${st.id}"><span class="meth-cmd-text">${esc(cmd)}</span><button class="tool-cmd-copy" onclick="event.stopPropagation();copyToClipboard(${escAttr(JSON.stringify(cmd))});toast('📋 コピーしました')" title="コピー"><span class="material-symbols-rounded" style="font-size:14px">content_copy</span></button></pre>`:""}
         ${st.hint?`<div class="meth-hint"><span class="material-symbols-rounded" style="font-size:13px">lightbulb</span>${esc(st.hint)}</div>`:""}
         ${st.next?`<div class="meth-next"><span class="material-symbols-rounded" style="font-size:13px">arrow_forward</span>${esc(st.next)}</div>`:""}
       </div>
@@ -180,21 +153,6 @@ function mDelCert(cert) {
   if (methCert === cert) methCert = remaining[0] || "OSCP";
   renderMethodology();
   toast(`🗑 資格タブ「${cert}」を削除しました`);
-}
-function mSetPh(ph,v){
-  methPlaceholders[ph]=v;
-  // 全体再描画するとフォーカスが外れる（1文字ずつ問題）ので、
-  // 表示中のコマンドテキストとコピーボタンだけを直接更新する
-  document.querySelectorAll(".meth-cmd").forEach(pre => {
-    const raw = pre.getAttribute("data-rawcmd") || "";
-    const resolved = methApplyPlaceholders(raw);
-    const textEl = pre.querySelector(".meth-cmd-text");
-    if (textEl) textEl.textContent = resolved;
-    pre.classList.toggle("resolved", resolved !== raw);
-    const copyBtn = pre.querySelector(".tool-cmd-copy");
-    if (copyBtn) copyBtn.setAttribute("onclick",
-      `event.stopPropagation();copyToClipboard(${escAttr(JSON.stringify(resolved))});toast('📋 コピーしました')`);
-  });
 }
 function mToggleSection(id){ methOpenSections[id]=!methOpenSections[id]; renderMethodology(); }
 function mToggleCheck(id){ methChecked[id]=!methChecked[id]; renderMethodology(); }
@@ -326,7 +284,7 @@ function mAddStep(sid) {
   const f = mFindSection(sid); if (!f) return;
   openModal("手法を追加",
     `<label>手法名</label><input id="mtLabel" placeholder="例: Enum4linux">
-     <label>コマンド（&lt;IP&gt; 等のプレースホルダOK）</label><textarea id="mtCmd" placeholder="enum4linux -a <IP>"></textarea>
+     <label>コマンド</label><textarea id="mtCmd" placeholder="enum4linux -a 10.10.10.5"></textarea>
      <label>条件ヒント（いつ効くか・任意）</label><input id="mtHint" placeholder="匿名アクセスが有効な時">
      <label>次の手（成功したら・任意）</label><input id="mtNext" placeholder="共有が見えたら smbclient で接続">`,
     () => {

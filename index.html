@@ -1347,6 +1347,107 @@ body.edit #editBanner { display: flex; }
 .meth-import-opt { font-size: 12.5px; color: var(--md-on-surface); margin: 12px 0 6px; }
 .meth-import-hint { font-size: 11.5px; color: var(--md-on-surface-var); font-family: var(--font-mono); }
 </style>
+<style id="attacklog-css">
+/* ═══ 攻略ログ (attacklog) ═══ */
+.al-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.al-card{background:var(--md-surface-container);border:1px solid var(--md-outline-var);border-radius:14px;padding:16px;cursor:pointer;transition:.15s}
+.al-card:hover{border-color:var(--md-outline);transform:translateY(-1px)}
+.al-card-top{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.al-card-cert{margin-left:auto;font-family:var(--font-mono);font-size:10.5px;font-weight:700;color:var(--md-on-surface-var);border:1px solid var(--md-outline-var);border-radius:5px;padding:2px 7px}
+.al-status{font-family:var(--font-mono);font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:5px;letter-spacing:.3px}
+.al-status.rooted{background:rgba(63,208,127,.14);color:#2a9d63}
+.al-status.prog{background:rgba(224,169,68,.16);color:#a8791f}
+.al-status.todo{background:var(--md-surface-container-high,rgba(125,145,134,.14));color:var(--md-on-surface-var)}
+.al-card-name{font-size:16px;font-weight:700;margin-bottom:3px}
+.al-card-ip{font-family:var(--font-mono);font-size:12px;color:var(--md-primary);margin-bottom:10px}
+.al-card-sum{font-size:12px;color:var(--md-on-surface-var);line-height:1.55;margin-bottom:11px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.al-card-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:11px}
+.al-tag{font-family:var(--font-mono);font-size:10px;color:var(--md-on-surface-var);background:var(--md-surface-dim);border:1px solid var(--md-outline-var);padding:2px 7px;border-radius:5px}
+.al-card-foot{display:flex;align-items:center;gap:14px;font-family:var(--font-mono);font-size:11px;color:var(--md-on-surface-var);border-top:1px solid var(--md-outline-var);padding-top:10px}
+.al-card-foot b{color:var(--md-on-surface)}
+.al-flag-got{color:#2a9d63}
+
+/* 詳細 */
+.al-td{display:grid;grid-template-columns:1fr 264px;gap:26px}
+.al-td-title{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.al-td-title h1{font-size:26px;font-weight:700}
+.al-td-meta{display:flex;flex-wrap:wrap;gap:14px;font-family:var(--font-mono);font-size:12px;color:var(--md-on-surface-var);margin-bottom:14px}
+.al-td-meta b{color:var(--md-on-surface)}
+.al-summary{background:var(--md-surface-container);border:1px solid var(--md-outline-var);border-left:3px solid var(--md-primary);border-radius:10px;padding:12px 15px;font-size:13px;line-height:1.65;margin-bottom:20px}
+.al-summary-lbl{display:block;font-family:var(--font-mono);font-size:10.5px;color:var(--md-primary);font-weight:600;margin-bottom:4px;letter-spacing:.4px}
+
+.al-quick{display:flex;gap:8px;margin-bottom:8px}
+.al-phase-pick{position:relative;font-family:var(--font-mono);font-size:12.5px;font-weight:700;padding:0 12px;border-radius:10px;border:1px solid var(--md-outline-var);white-space:nowrap}
+.al-vt-menu{position:absolute;top:calc(100% + 4px);left:0;background:var(--md-surface-container);border:1px solid var(--md-outline-var);border-radius:10px;padding:5px;display:none;flex-direction:column;gap:2px;z-index:30;min-width:140px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.al-vt-menu.open{display:flex}
+.al-vt-opt{text-align:left;padding:7px 10px;border-radius:7px;font-size:12.5px;font-family:var(--font-mono);font-weight:600;background:none;border:none;cursor:pointer;color:inherit}
+.al-vt-opt:hover{background:var(--md-surface-container-high,var(--md-surface-dim))}
+.al-quick input{flex:1;background:var(--md-surface-container);border:1px solid var(--md-outline-var);border-radius:10px;padding:11px 14px;font-size:13px;outline:none;font-family:var(--font-mono);color:inherit}
+.al-quick input:focus{border-color:var(--md-primary)}
+.al-go{background:var(--md-primary-container);color:var(--md-on-primary-container);font-weight:700;padding:0 18px;border-radius:10px;font-size:13px;border:none;cursor:pointer}
+.al-quick-hint{font-size:11px;color:var(--md-on-surface-var);font-family:var(--font-mono);margin-bottom:18px;line-height:1.6}
+.al-quick-hint b{color:var(--md-on-surface)}
+.al-phase-edit{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:12px;color:var(--md-on-surface-var);border:1px dashed var(--md-outline-var);border-radius:8px;padding:5px 10px;background:none;cursor:pointer}
+.al-phase-edit:hover{color:var(--md-on-surface);border-color:var(--md-outline)}
+
+.al-steps{display:flex;flex-direction:column}
+.al-step{display:grid;grid-template-columns:92px 1fr;gap:14px;padding:16px 0;border-top:1px solid var(--md-outline-var)}
+.al-step:first-child{border-top:none}
+.al-step-side{display:flex;flex-direction:column;gap:6px;align-items:flex-start;padding-top:2px}
+.al-phase-badge{font-family:var(--font-mono);font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:6px}
+.al-step-idx{font-family:var(--font-mono);font-size:10px;color:var(--md-on-surface-var)}
+.al-step-body{min-width:0}
+.al-cmd{position:relative;background:var(--md-surface-dim);border:1px solid var(--md-outline-var);border-radius:9px;padding:10px 40px 10px 13px;font-family:var(--font-mono);font-size:12.5px;line-height:1.6;white-space:pre-wrap;word-break:break-all}
+.al-kw{color:var(--md-primary)}
+.al-hl{color:var(--md-error);font-weight:600}
+.al-comment{color:var(--md-on-surface-var)}
+.al-copy{position:absolute;top:7px;right:7px;width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--md-on-surface-var);background:none;border:none;cursor:pointer}
+.al-copy:hover{background:var(--md-surface-container);color:var(--md-on-surface)}
+.al-copy .material-symbols-rounded{font-size:15px}
+.al-copy.inline{position:static;display:inline-grid;vertical-align:middle;margin-left:6px}
+.al-output{margin-top:7px;font-family:var(--font-mono);font-size:11.5px;line-height:1.6;color:var(--md-on-surface-var);background:var(--md-surface-container);border-radius:8px;padding:8px 12px;white-space:pre-wrap;word-break:break-word;max-height:160px;overflow:auto}
+.al-line{display:flex;gap:8px;margin-top:8px;font-size:12.5px;line-height:1.6}
+.al-line .ic{font-size:16px;flex-shrink:0;margin-top:1px}
+.al-line.aim .ic{color:var(--md-primary)}
+.al-line.learn .ic{color:var(--md-warn)}
+.al-step-acts{display:flex;gap:2px;margin-top:9px;align-items:center}
+.al-to-drawer{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:7px;font-size:11px;font-family:var(--font-mono);color:var(--md-primary);background:none;border:none;cursor:pointer}
+.al-to-drawer:hover{background:var(--md-primary-container);color:var(--md-on-primary-container)}
+.al-to-drawer .material-symbols-rounded{font-size:15px}
+
+.al-flag{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11.5px;padding:7px 10px;border-radius:8px;background:var(--md-surface-dim);border:1px solid var(--md-outline-var);margin-bottom:6px}
+.al-flag .lbl{color:var(--md-on-surface-var)}
+.al-flag .val{margin-left:auto;color:var(--md-on-surface);word-break:break-all}
+.al-flag.got{border-color:rgba(63,208,127,.4)}
+.al-flag.got .val{color:#2a9d63}
+.al-side-drawers{display:flex;flex-direction:column;gap:5px}
+.al-side-drawer{display:flex;align-items:center;gap:6px;font-size:11.5px;background:var(--md-surface-dim);border:1px solid var(--md-outline-var);border-radius:7px;padding:5px 8px}
+.al-side-drawer .sig{color:var(--md-on-surface);line-height:1.4}
+.al-side-drawer-del{margin-left:auto;color:var(--md-on-surface-var);background:none;border:none;cursor:pointer;display:grid;place-items:center}
+.al-side-drawer-del:hover{color:var(--md-error)}
+
+/* 引き出し */
+.al-drawer-hero{background:var(--md-surface-container);border:1px solid var(--md-outline-var);border-radius:14px;padding:14px 18px;margin-bottom:18px;font-size:13px;line-height:1.7;color:var(--md-on-surface-var)}
+.al-drawer-hero b{color:var(--md-on-surface)}
+.al-drawer-list{display:flex;flex-direction:column;gap:10px}
+.al-drawer-card{background:var(--md-surface-container);border:1px solid var(--md-outline-var);border-radius:12px;padding:14px 16px;display:grid;grid-template-columns:1fr 24px 1.35fr;gap:14px;align-items:center}
+.al-drawer-card:hover{border-color:var(--md-outline)}
+.al-dc-signal{display:flex;gap:9px;align-items:flex-start}
+.al-dc-signal .material-symbols-rounded{font-size:18px;color:var(--md-warn);margin-top:1px;flex-shrink:0}
+.al-dc-signal span:last-child{font-size:13px;font-weight:600;line-height:1.5}
+.al-dc-src{display:inline-block;font-family:var(--font-mono);font-size:10px;color:var(--md-on-surface-var);margin-top:6px;cursor:pointer}
+.al-dc-src:hover{color:var(--md-primary)}
+.al-dc-arrow{display:grid;place-items:center;color:var(--md-on-surface-var)}
+.al-dc-action{font-family:var(--font-mono);font-size:12px;line-height:1.55;color:var(--md-on-surface);word-break:break-word}
+.al-modal-note{font-size:11.5px;color:var(--md-on-surface-var);margin-top:10px;line-height:1.6;font-family:var(--font-mono)}
+
+@media(max-width:840px){
+  .al-td{grid-template-columns:1fr}
+  .al-drawer-card{grid-template-columns:1fr;gap:8px}
+  .al-dc-arrow{transform:rotate(90deg);justify-self:start}
+  .al-step{grid-template-columns:1fr}.al-step-side{flex-direction:row;align-items:center}
+}
+</style>
 </head>
 <body>
 
@@ -1414,8 +1515,7 @@ body.edit #editBanner { display: flex; }
       <button data-mode="methodology" title="攻略メソドロジー"><span class="material-symbols-rounded">account_tree</span><span class="mode-label">メソドロジー</span></button>
       <button data-mode="commands" title="便利コマンド集"><span class="material-symbols-rounded">terminal</span><span class="mode-label">コマンド</span></button>
       <span class="mode-group-sep" title="攻撃"></span>
-      <button data-mode="logbook" title="攻撃ログブック"><span class="material-symbols-rounded">track_changes</span><span class="mode-label">攻撃ログ</span></button>
-      <button data-mode="web" title="Web攻略 (OSWA)"><span class="material-symbols-rounded">language</span><span class="mode-label">Web攻略</span></button>
+      <button data-mode="attacklog" title="攻略ログ (OSCP / OSWA)"><span class="material-symbols-rounded">track_changes</span><span class="mode-label">攻略ログ</span></button>
       <button data-mode="payload" title="ペイロード集"><span class="material-symbols-rounded">vaccines</span><span class="mode-label">ペイロード</span></button>
       <span class="mode-group-sep" title="防御"></span>
       <button data-mode="hunt" title="ハント"><span class="material-symbols-rounded">travel_explore</span><span class="mode-label">ハント</span></button>
@@ -1455,9 +1555,8 @@ body.edit #editBanner { display: flex; }
 <div class="toast" id="toast"></div>
 
 <script src="app.js"></script>
-<script src="logbook.js"></script>
+<script src="attacklog.js"></script>
 <script src="hunting.js"></script>
-<script src="web.js"></script>
 <script src="tools.js"></script>
 <script src="knowledge_data.js"></script>
 <script src="knowledge.js"></script>

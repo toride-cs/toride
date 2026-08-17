@@ -11,7 +11,7 @@
 ════════════════════════════════════════════════════════ */
 
 /* ── STATE ─────────────────────────────────────────── */
-let data       = { tabs: [], machines: [], phases: [], hunts: [], queries: [], targets: [], payloads: [], vulnTypes: [], tools: [], knowledge: [], dashboards: [], methodologies: [], commands: [] };
+let data       = { tabs: [], attackLogs: [], machines: [], phases: [], hunts: [], queries: [], targets: [], payloads: [], vulnTypes: [], tools: [], knowledge: [], dashboards: [], methodologies: [], commands: [] };
 let appMode    = "cheatsheet";  // ... | "dashboards" | "methodology"
 let activeId   = null;          // current sheet (tab) id
 let activeCat  = null;          // current category
@@ -21,12 +21,14 @@ let modalCb    = null;
 let activeTag  = null;          // tag filter within a sheet
 let searchMode = false;
 
-/* logbook state */
-let lbView       = "machines";  // machines | machine
-let lbMachineId  = null;        // 開いているマシン
-let lbAttemptId  = null;        // 開いている試行
-let lbPhaseFilter= null;        // フェーズ絞り込み (null=すべて)
-let lbFilter     = "all";       // machines一覧のフィルタ
+/* attacklog state (旧 logbook + web を一本化) */
+let alCert       = "OSCP";      // OSCP | OSWA（資格タブ）
+let alView       = "list";      // list | log | drawer
+let alLogId      = null;        // 開いている攻略ログ
+let alPhaseFilter= null;        // フェーズ絞り込み (null=すべて)
+let alInputPhase = null;        // クイック入力の選択中フェーズ
+let alDrawerQuery= "";          // 引き出しの検索クエリ
+let alFilter     = "all";       // 一覧のフィルタ（予備）
 
 /* threat-hunting state */
 let huntView     = "list";      // list | hunt
@@ -37,13 +39,8 @@ let queryFilter  = "all";       // クエリ一覧の言語/Techフィルタ
 let queryLangFilter = null;     // クエリ言語フィルタ
 let queryTechFilter = null;     // Technique フィルタ
 
-/* web (OSWA) state */
-let webView       = "targets";  // targets | target
-let webTargetId   = null;       // 開いているターゲット
-let webVtFilter   = null;       // ターゲット詳細の脆弱性タイプ絞り込み
-let webFilter     = "all";      // ターゲット一覧のフィルタ
+/* payload (ペイロード集) state */
 let payloadVtFilter = null;     // ペイロード一覧の脆弱性タイプ絞り込み
-let webInputVt    = null;       // ワンライン入力の選択中タイプ
 
 /* tools state */
 let toolsView     = "list";     // list | tool
@@ -67,7 +64,6 @@ const DASH_PLATFORMS = {
 
 /* methodology state */
 let methCert      = "OSCP";     // OSCP | OSWA（資格タブ）
-let methPlaceholders = {};      // { "<IP>": "10.10.10.5", ... } プレースホルダ置換値
 let methChecked   = {};         // { stepId: true } セッション参照用チェック
 let methOpenSections = {};      // { sectionId: true } アコーディオン開閉
 
@@ -235,6 +231,62 @@ function normalizeData() {
     data.phases = JSON.parse(JSON.stringify(DEFAULT_PHASES));
   }
   data.phases.forEach(p => { p.id = p.id || uid(); p.color = p.color || "#7d9186"; p.label = p.label || p.id; });
+
+  // ── 攻略ログ（旧 logbook + web を一本化・後方互換） ──
+  if (!Array.isArray(data.attackLogs)) data.attackLogs = [];
+
+  // 旧データ（machines / targets）からの一度きり移行（既存 attackLogs が空の時のみ）
+  if (!data.attackLogs.length) {
+    (Array.isArray(data.machines) ? data.machines : []).forEach(m => {
+      const steps = [];
+      const atts = Array.isArray(m.attempts) && m.attempts.length ? m.attempts : (m.steps ? [{ steps: m.steps }] : []);
+      atts.forEach(a => (a.steps || []).forEach(s => steps.push({
+        id: s.id || uid(), phase: s.phase || "", command: s.command || "",
+        output: "", aim: s.note || "", learning: s.learning || "", ts: s.ts || Date.now(),
+      })));
+      data.attackLogs.push({
+        id: m.id || uid(), cert: "OSCP", name: m.name || "無名マシン",
+        ip: m.ip || "", os: m.os || m.platform || "", status: "prog",
+        tags: Array.isArray(m.tags) ? m.tags : [], summary: "",
+        localTxt: "", proofTxt: "", notes: "", steps, drawers: [], ts: Date.now(),
+      });
+    });
+    (Array.isArray(data.targets) ? data.targets : []).forEach(t => {
+      const steps = (t.findings || []).map(f => ({
+        id: f.id || uid(), phase: "foothold",
+        command: f.request || f.payload || "", output: "",
+        aim: (f.endpoint ? f.endpoint + " " : "") + (f.note || ""),
+        learning: f.impact || "", ts: f.ts || Date.now(),
+      }));
+      data.attackLogs.push({
+        id: t.id || uid(), cert: "OSWA", name: t.name || "無名ターゲット",
+        ip: t.url || "", os: (t.techStack || []).join("/"),
+        status: t.proofTxt ? "rooted" : "prog",
+        tags: Array.isArray(t.techStack) ? t.techStack : [], summary: t.notes || "",
+        localTxt: t.localTxt || "", proofTxt: t.proofTxt || "", notes: t.notes || "",
+        steps, drawers: [], ts: Date.now(),
+      });
+    });
+  }
+
+  data.attackLogs.forEach(l => {
+    l.id = l.id || uid();
+    l.cert = (l.cert === "OSWA") ? "OSWA" : (l.cert || "OSCP");
+    l.name = l.name || "無名ターゲット";
+    l.ip = l.ip || ""; l.os = l.os || "";
+    l.status = l.status || "prog";
+    l.tags = Array.isArray(l.tags) ? l.tags : [];
+    l.summary = l.summary || ""; l.localTxt = l.localTxt || ""; l.proofTxt = l.proofTxt || "";
+    l.notes = l.notes || ""; l.ts = l.ts || Date.now();
+    l.steps = Array.isArray(l.steps) ? l.steps : [];
+    l.steps.forEach(s => {
+      s.id = s.id || uid(); s.phase = s.phase || "";
+      s.command = s.command || ""; s.output = s.output || "";
+      s.aim = s.aim || ""; s.learning = s.learning || ""; s.ts = s.ts || Date.now();
+    });
+    l.drawers = Array.isArray(l.drawers) ? l.drawers : [];
+    l.drawers.forEach(d => { d.id = d.id || uid(); d.signal = d.signal || ""; d.action = d.action || ""; d.ref = d.ref || l.name; });
+  });
 
   if (!Array.isArray(data.machines)) data.machines = [];
   data.machines.forEach(m => {
@@ -491,11 +543,10 @@ function gotoTab(id) { closeSidebar(); switchTab(id); }
 ════════════════════════════════════════════════════ */
 function render() {
   syncModeUI();
-  if (appMode === "logbook") { renderLogbook(); return; }
+  if (appMode === "attacklog") { renderAttackLog(); return; }
   if (appMode === "hunt")    { renderHunt(); return; }
   if (appMode === "query")   { renderQueryLib(); return; }
   if (appMode === "coverage"){ renderCoverage(); return; }
-  if (appMode === "web")     { renderWeb(); return; }
   if (appMode === "payload") { renderPayloadLib(); return; }
   if (appMode === "tools")   { renderTools(); return; }
   if (appMode === "knowledge") { renderKnowledge(); return; }
@@ -515,11 +566,10 @@ function setMode(mode) {
   appMode = mode;
   searchMode = false;
   clearSearchInput();
-  document.body.classList.toggle("mode-logbook", mode === "logbook");
+  document.body.classList.toggle("mode-attacklog", mode === "attacklog");
   document.body.classList.toggle("mode-hunt", mode === "hunt");
   document.body.classList.toggle("mode-query", mode === "query");
   document.body.classList.toggle("mode-coverage", mode === "coverage");
-  document.body.classList.toggle("mode-web", mode === "web");
   document.body.classList.toggle("mode-payload", mode === "payload");
   document.body.classList.toggle("mode-tools", mode === "tools");
   document.body.classList.toggle("mode-knowledge", mode === "knowledge");
@@ -537,11 +587,10 @@ function syncModeUI() {
   const si = document.getElementById("searchInput");
   if (si) {
     const ph = {
-      logbook: "マシン・コマンド・技を検索…",
+      attacklog: "兆候で引く… 例: whitelabel / traversal / xp_cmdshell",
       hunt: "ハント・仮説・Technique を検索…",
       query: "クエリ・Technique・データソースを検索…",
       coverage: "",
-      web: "ターゲット・脆弱性・URLを検索…",
       payload: "ペイロード・タイプ・用途を検索…",
       tools: "ツール・コマンドを検索…",
       knowledge: "ナレッジ・URL・タグを検索…",
@@ -819,13 +868,12 @@ function bindGlobalUI() {
   si.addEventListener("input", function () {
     const q = this.value.trim();
     document.getElementById("searchClear").classList.toggle("show", q.length>0);
-    if (!q) { searchMode = false; render(); return; }
+    if (!q) { searchMode = false; alDrawerQuery = ""; render(); return; }
     searchMode = true;
-    if (appMode === "logbook") { renderLbSearch(); return; }
+    if (appMode === "attacklog") { renderAttackLogSearch(); return; }
     if (appMode === "hunt")    { renderHuntSearch(); return; }
     if (appMode === "query")   { renderQuerySearch(); return; }
     if (appMode === "coverage"){ searchMode = false; return; }
-    if (appMode === "web")     { renderWebSearch(); return; }
     if (appMode === "payload") { renderPayloadSearch(); return; }
     if (appMode === "tools")   { renderToolsSearch(); return; }
     if (appMode === "knowledge") { renderKnowledgeSearch(); return; }
@@ -834,14 +882,13 @@ function bindGlobalUI() {
     if (appMode === "commands") { renderCommandsSearch(); return; }
     renderNav(); renderSearch();
   });
-  document.getElementById("searchClear").onclick = () => { clearSearchInput(); searchMode=false; render(); si.focus(); };
+  document.getElementById("searchClear").onclick = () => { clearSearchInput(); searchMode=false; alDrawerQuery=""; render(); si.focus(); };
 
   document.getElementById("brandHome").onclick = () => {
-    if (appMode === "logbook") { lbView="machines"; lbMachineId=null; searchMode=false; clearSearchInput(); render(); }
+    if (appMode === "attacklog") { alView="list"; alLogId=null; alDrawerQuery=""; searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "hunt") { huntView="list"; huntId=null; searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "query") { searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "coverage") { render(); }
-    else if (appMode === "web") { webView="targets"; webTargetId=null; searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "payload") { searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "tools") { toolsView="list"; toolId=null; searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "knowledge") { knowView="list"; knowDetailId=null; searchMode=false; clearSearchInput(); render(); }
