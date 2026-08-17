@@ -1511,6 +1511,22 @@ body.edit #editBanner { display: flex; }
 .al-side-btn.danger:hover{background:rgba(224,104,95,.12);color:var(--md-error);border-color:var(--md-error)}
 
 @media(max-width:840px){ .al-cmp-grid{grid-template-columns:1fr} }
+
+/* ── ハントログ 固有 ── */
+.al-status.done{background:rgba(63,208,127,.14);color:#2a9d63}
+.hl-chiprow{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.hl-lchip{font-family:var(--font-mono);font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:8px;border:1px solid var(--md-outline-var);color:var(--md-on-surface-var);background:none;cursor:pointer;transition:.12s}
+.hl-lchip:hover{color:var(--md-on-surface);border-color:var(--md-outline)}
+.hl-lchip.on{background:var(--md-primary-container);border-color:transparent;color:var(--md-on-primary-container)}
+.hl-verdict-row{display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap}
+.hl-verdict-lbl{font-family:var(--font-mono);font-size:11.5px;color:var(--md-on-surface-var)}
+.hl-verdict-row .hl-chiprow{margin-bottom:0}
+.hl-vchip{font-family:var(--font-mono);font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:8px;border:1px solid var(--md-outline-var);color:var(--md-on-surface-var);background:none;cursor:pointer;transition:.12s}
+.hl-vchip:hover{border-color:var(--vc);color:var(--vc)}
+.hl-vchip.on{background:color-mix(in srgb,var(--vc) 18%,transparent);border-color:var(--vc);color:var(--vc)}
+.hl-badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:7px}
+.hl-lang{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;background:var(--md-surface-container-high,var(--md-surface-dim));color:var(--md-primary);border:1px solid var(--md-outline-var)}
+.hl-verdict{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px}
 </style>
 </head>
 <body>
@@ -1620,7 +1636,7 @@ body.edit #editBanner { display: flex; }
 
 <script src="app.js"></script>
 <script src="attacklog.js"></script>
-<script src="hunting.js"></script>
+<script src="huntlog.js"></script>
 <script src="tools.js"></script>
 <script src="knowledge_data.js"></script>
 <script src="knowledge.js"></script>

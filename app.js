@@ -11,7 +11,7 @@
 ════════════════════════════════════════════════════════ */
 
 /* ── STATE ─────────────────────────────────────────── */
-let data       = { tabs: [], attackLogs: [], machines: [], phases: [], hunts: [], queries: [], targets: [], payloads: [], vulnTypes: [], tools: [], knowledge: [], dashboards: [], methodologies: [], commands: [] };
+let data       = { tabs: [], attackLogs: [], machines: [], phases: [], huntLogs: [], huntPhases: [], hunts: [], queries: [], targets: [], payloads: [], vulnTypes: [], tools: [], knowledge: [], dashboards: [], methodologies: [], commands: [] };
 let appMode    = "cheatsheet";  // ... | "dashboards" | "methodology"
 let activeId   = null;          // current sheet (tab) id
 let activeCat  = null;          // current category
@@ -31,10 +31,16 @@ let alDrawerQuery= "";          // 引き出しの検索クエリ
 let alFilter     = "all";       // 一覧のフィルタ（予備）
 
 /* threat-hunting state */
-let huntView     = "list";      // list | hunt
-let huntId       = null;        // 開いているハント
-let huntStageFilter = null;     // 所見フィルタ (null=すべて)
-let huntFilter   = "all";       // ハント一覧のフィルタ
+/* huntlog state (旧 hunting を OSTH/OSDA 軸へ刷新) */
+let hgCert       = "OSTH";      // OSTH | OSDA（資格タブ）
+let hgView       = "list";      // list | log | drawer
+let hgLogId      = null;        // 開いているハントログ
+let hgPhaseFilter= null;        // フェーズ絞り込み (null=すべて)
+let hgInputPhase = null;        // 記入フォームの選択中フェーズ
+let hgInputLang  = "KQL";       // 記入フォームの選択中言語
+let hgInputVerdict = "";        // 記入フォームの選択中判定
+let hgDrawerQuery= "";          // 引き出しの検索クエリ
+let hgFilter     = "all";       // 一覧フィルタ（予備）
 let queryFilter  = "all";       // クエリ一覧の言語/Techフィルタ
 let queryLangFilter = null;     // クエリ言語フィルタ
 let queryTechFilter = null;     // Technique フィルタ
@@ -92,6 +98,14 @@ const DEFAULT_PHASES = [
   { id: "foothold", label: "foothold", color: "#e0a944" },
   { id: "privesc",  label: "privesc",  color: "#e05c5c" },
   { id: "loot",     label: "loot",     color: "#3fd07f" },
+];
+
+const DEFAULT_HUNT_PHASES = [
+  { id: "collect",  label: "収集",  color: "#5aa9e0" },
+  { id: "hypo",     label: "仮説",  color: "#b085e0" },
+  { id: "hunt",     label: "調査",  color: "#e0a944" },
+  { id: "detect",   label: "検知",  color: "#e05c5c" },
+  { id: "respond",  label: "対応",  color: "#3fd07f" },
 ];
 
 /* threat-hunting constants */
@@ -321,6 +335,56 @@ function normalizeData() {
         s.ts = s.ts || Date.now();
       });
     });
+  });
+
+  // ── ハントログ（旧 hunts を OSTH/OSDA 軸へ刷新・後方互換） ──
+  if (!Array.isArray(data.huntPhases) || !data.huntPhases.length) {
+    data.huntPhases = JSON.parse(JSON.stringify(DEFAULT_HUNT_PHASES));
+  }
+  data.huntPhases.forEach(p => { p.id = p.id || uid(); p.color = p.color || "#7d9186"; p.label = p.label || p.id; });
+
+  if (!Array.isArray(data.huntLogs)) data.huntLogs = [];
+
+  // 旧 data.hunts からの一度きり移行（huntLogs が空の時のみ）
+  if (!data.huntLogs.length && Array.isArray(data.hunts) && data.hunts.length) {
+    data.hunts.forEach(h => {
+      const steps = (h.steps || []).map(s => ({
+        id: s.id || uid(), phase: "hunt", lang: s.lang || "KQL",
+        query: s.query || "", output: s.finding || "", aim: "", learning: "",
+        verdict: s.verdict || "", ts: s.ts || Date.now(),
+      }));
+      data.huntLogs.push({
+        id: h.id || uid(), cert: "OSTH", name: h.title || "無題のハント",
+        scope: (h.dataSources || []).join(", ") || h.environment || "",
+        status: h.status === "clear" || h.status === "detected" ? "done" : "prog",
+        tags: Array.isArray(h.techniques) ? h.techniques : [],
+        summary: [h.hypothesis, h.conclusion].filter(Boolean).join(" / "),
+        steps, drawers: [], ts: h.started_at || Date.now(),
+      });
+    });
+  }
+
+  const hgLangOk = new Set(QUERY_LANGS);
+  const hgVerdictOk = new Set(HUNT_VERDICTS.map(v => v.id));
+  data.huntLogs.forEach(l => {
+    l.id = l.id || uid();
+    l.cert = (l.cert === "OSDA") ? "OSDA" : (l.cert || "OSTH");
+    l.name = l.name || "無題のハント";
+    l.scope = l.scope || "";
+    l.status = ["todo","prog","done"].includes(l.status) ? l.status : "prog";
+    l.tags = Array.isArray(l.tags) ? l.tags : [];
+    l.summary = l.summary || ""; l.ts = l.ts || Date.now();
+    l.steps = Array.isArray(l.steps) ? l.steps : [];
+    l.steps.forEach(s => {
+      s.id = s.id || uid(); s.phase = s.phase || "";
+      s.lang = hgLangOk.has(s.lang) ? s.lang : "KQL";
+      s.query = s.query || s.command || ""; s.output = s.output || s.finding || "";
+      s.aim = s.aim || ""; s.learning = s.learning || "";
+      s.verdict = hgVerdictOk.has(s.verdict) ? s.verdict : "";
+      s.ts = s.ts || Date.now();
+    });
+    l.drawers = Array.isArray(l.drawers) ? l.drawers : [];
+    l.drawers.forEach(d => { d.id = d.id || uid(); d.signal = d.signal || ""; d.action = d.action || ""; d.ref = d.ref || l.name; });
   });
 
   // ── スレットハンティング（新規・後方互換） ──
@@ -868,7 +932,7 @@ function bindGlobalUI() {
   si.addEventListener("input", function () {
     const q = this.value.trim();
     document.getElementById("searchClear").classList.toggle("show", q.length>0);
-    if (!q) { searchMode = false; alDrawerQuery = ""; render(); return; }
+    if (!q) { searchMode = false; alDrawerQuery = ""; hgDrawerQuery = ""; render(); return; }
     searchMode = true;
     if (appMode === "attacklog") { renderAttackLogSearch(); return; }
     if (appMode === "hunt")    { renderHuntSearch(); return; }
@@ -882,11 +946,11 @@ function bindGlobalUI() {
     if (appMode === "commands") { renderCommandsSearch(); return; }
     renderNav(); renderSearch();
   });
-  document.getElementById("searchClear").onclick = () => { clearSearchInput(); searchMode=false; alDrawerQuery=""; render(); si.focus(); };
+  document.getElementById("searchClear").onclick = () => { clearSearchInput(); searchMode=false; alDrawerQuery=""; hgDrawerQuery=""; render(); si.focus(); };
 
   document.getElementById("brandHome").onclick = () => {
     if (appMode === "attacklog") { alView="list"; alLogId=null; alDrawerQuery=""; searchMode=false; clearSearchInput(); render(); }
-    else if (appMode === "hunt") { huntView="list"; huntId=null; searchMode=false; clearSearchInput(); render(); }
+    else if (appMode === "hunt") { hgView="list"; hgLogId=null; hgDrawerQuery=""; searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "query") { searchMode=false; clearSearchInput(); render(); }
     else if (appMode === "coverage") { render(); }
     else if (appMode === "payload") { searchMode=false; clearSearchInput(); render(); }
