@@ -13,7 +13,7 @@ const ALLOWED_FILES = {
   '/index.html': 'index.html',
   '/app.js':     'app.js',
   '/attacklog.js': 'attacklog.js',
-  '/hunting.js': 'hunting.js',
+  '/huntlog.js': 'huntlog.js',
   '/tools.js':   'tools.js',
   '/knowledge.js': 'knowledge.js',
   '/knowledge_data.js': 'knowledge_data.js',
