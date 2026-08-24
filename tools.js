@@ -121,12 +121,10 @@ function renderToolDetail() {
   const pr = toolPrioMeta(t.priority);
 
   const cmds = (t.commands||[]).map((c,i,arr) => `
-    <div class="tool-cmd-block">
+    <div class="tool-cmd-block" data-dnd-id="${c.id}">
       <div class="tool-cmd-label">
-        <span>${esc(c.label)||`コマンド ${i+1}`}</span>
+        ${dndHandle('ドラッグでコマンドを並び替え')}<span>${esc(c.label)||`コマンド ${i+1}`}</span>
         <span class="tool-cmd-acts">
-          <button class="tool-cmd-act" onclick="tMoveCommand('${t.id}','${c.id}',-1)" title="上へ" ${i===0?'disabled':''}><span class="material-symbols-rounded" style="font-size:14px">arrow_upward</span></button>
-          <button class="tool-cmd-act" onclick="tMoveCommand('${t.id}','${c.id}',1)" title="下へ" ${i===arr.length-1?'disabled':''}><span class="material-symbols-rounded" style="font-size:14px">arrow_downward</span></button>
           <button class="tool-cmd-act" onclick="tEditCommand('${t.id}','${c.id}')" title="編集"><span class="material-symbols-rounded" style="font-size:14px">edit</span></button>
           <button class="tool-cmd-act danger" onclick="tDelCommand('${t.id}','${c.id}')" title="削除"><span class="material-symbols-rounded" style="font-size:14px">delete</span></button>
         </span>
@@ -155,7 +153,7 @@ function renderToolDetail() {
       <div class="tool-detail-meta"><span class="tool-cat-tag">${esc(t.category)}</span>${certs}</div>
 
       <div class="tool-sec-h">コマンド</div>
-      ${cmds}
+      <div class="tool-cmds" data-dnd-group="tool-cmds:${t.id}">${cmds}</div>
       <button class="tool-add-cmd" onclick="tAddCommand('${t.id}')"><span class="material-symbols-rounded" style="font-size:15px">add</span>コマンドを追加</button>
 
       ${t.tips ? `<div class="tool-sec-h">Tips・注意点</div><div class="tool-tips-box">${renderMd(esc(t.tips))}</div>` : ""}
@@ -164,6 +162,11 @@ function renderToolDetail() {
       <div class="tool-ref-list">${refs}</div>
     </div>
   `;
+
+  registerSortable("tool-cmds:" + t.id, ids => {
+    reorderVisible(t.commands, ids);
+    renderToolDetail();
+  });
 }
 
 function tBackList(){ toolsView="list"; toolId=null; renderTools(); }

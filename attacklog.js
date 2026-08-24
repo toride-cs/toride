@@ -167,8 +167,9 @@ function alRenderDetail() {
   const timeline = items.length ? items.map(({ x, i }) => {
     const c = alPhaseColor(x.phase);
     return `
-      <div class="al-step">
+      <div class="al-step" data-dnd-id="${x.id}">
         <div class="al-step-side">
+          ${dndHandle('ドラッグでステップを並び替え')}
           <span class="al-phase-badge" style="background:${c}22;color:${c}">${esc(alPhaseLabel(x.phase))}</span>
           <span class="al-step-idx">#${i+1}</span>
         </div>
@@ -182,8 +183,6 @@ function alRenderDetail() {
           <div class="al-step-acts">
             <button class="al-act-btn edit" onclick="alEditStep(${i})"><span class="material-symbols-rounded">edit</span>編集</button>
             <button class="al-act-btn" onclick="alStepToDrawer(${i})"><span class="material-symbols-rounded">bolt</span>引き出しに追加</button>
-            <button class="al-act-ico" onclick="alMoveStep(${i},-1)" title="上へ" ${i===0?'disabled':''}><span class="material-symbols-rounded">arrow_upward</span></button>
-            <button class="al-act-ico" onclick="alMoveStep(${i},1)" title="下へ" ${i===l.steps.length-1?'disabled':''}><span class="material-symbols-rounded">arrow_downward</span></button>
             <button class="al-act-ico danger" onclick="alDelStep(${i})" title="削除"><span class="material-symbols-rounded">delete</span></button>
           </div>
         </div>
@@ -235,7 +234,7 @@ function alRenderDetail() {
           </div>
         </div>
 
-        <div class="al-steps">${timeline}</div>
+        <div class="al-steps" data-dnd-group="al-steps:${l.id}">${timeline}</div>
       </div>
       <div class="al-td-side">
         <div class="th-side-sec"><h4>ログ情報</h4>
@@ -257,6 +256,12 @@ function alRenderDetail() {
       </div>
     </div>
   `;
+
+  // ステップの並び替え（フェーズ絞り込み中は表示分のみ入れ替え）
+  registerSortable("al-steps:" + l.id, ids => {
+    reorderVisible(l.steps, ids);
+    alRenderDetail();
+  });
 }
 
 /* ── フィルタ / 記入フォーム ── */

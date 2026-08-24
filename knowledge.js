@@ -89,10 +89,13 @@ function renderKnowledge() {
       ${catChips}
       ${kindChips?`<span class="th-sep"></span>${kindChips}`:""}
     </div>
-    ${list.length ? `<div class="know-grid">${list.map(renderKnowCard).join("")}</div>`
+    ${list.length ? `<div class="know-grid" data-dnd-group="know-list">${list.map(renderKnowCard).join("")}</div>`
       : emptyState("menu_book", data.knowledge.length?"該当するナレッジがありません":"ナレッジがまだありません",
           data.knowledge.length?"フィルタを変えてください":"「リンクを追加」で登録できます")}
   `;
+
+  // カードの並び替え（資格/カテゴリ/種別で絞り込み中は表示分のみ入れ替え）
+  registerSortable("know-list", ids => { reorderVisible(data.knowledge, ids); renderKnowledge(); });
 }
 
 function renderKnowCard(k) {
@@ -100,9 +103,9 @@ function renderKnowCard(k) {
   const certs = (k.certs||[]).map(c=>`<span class="tool-cert-mini">${esc(c)}</span>`).join("");
   const hasDetail = !!k.detail;
   return `
-    <div class="know-card">
+    <div class="know-card" data-dnd-id="${k.id}">
       <div class="know-card-top">
-        <span class="know-kind" style="background:${m.color}22;color:${m.color}">${esc(m.label)}</span>
+        ${dndHandle('ドラッグでカードを並び替え')}<span class="know-kind" style="background:${m.color}22;color:${m.color}">${esc(m.label)}</span>
         ${hasDetail?`<span class="know-hasdetail" title="アプリ内に整理情報あり"><span class="material-symbols-rounded" style="font-size:13px">article</span>まとめ</span>`:""}
         <button class="know-edit" onclick="kEditLink('${k.id}')" title="編集"><span class="material-symbols-rounded" style="font-size:15px">edit</span></button>
       </div>
@@ -212,78 +215,167 @@ function kBackList(){ knowView="list"; knowDetailId=null; renderKnowledge(); }
    まとめ（detail）の編集・貼り付け
    Claudeが作ったJSONを丸ごと貼るか、各項目を手で編集
 ════════════════════════════════════════════════════ */
+/* ── まとめ(detail) 構造化エディタ ─────────────────────────
+   各項目を個別欄で編集。要点・コマンドは行ごとに追加/削除/並び替え。
+   コマンドの「内容」は独立したテキストエリアなので改行(\n)もそのまま保持される。
+   JSON貼り付け欄はエディタへ“流し込む”ためのショートカット。
+─────────────────────────────────────────────────────── */
 function kEditDetail(id) {
   const k = data.knowledge.find(x=>x.id===id); if (!k) return;
   const d = k.detail || {};
-  const usageText = (d.usage||[]).map(u=>`${u.label} | ${u.content}`).join("\n");
-  const kpText = (d.keyPoints||[]).join("\n");
-
-  openModal("まとめを編集",
-    `<div class="know-paste-zone">
-       <label style="display:flex;align-items:center;gap:8px">
-         <span class="material-symbols-rounded" style="font-size:16px;color:var(--md-primary)">content_paste</span>
-         Claudeが作ったJSONを貼り付け（貼ると下の各欄に反映）
-       </label>
-       <textarea id="kJson" placeholder='{"overview":"...","keyPoints":["..."],"usage":[{"label":"...","content":"..."}],"oswaTips":"...","lastCurated":"2026-07-22"}' style="min-height:80px;font-family:var(--font-mono);font-size:11px"></textarea>
-       <button class="know-paste-apply" onclick="kApplyJson()"><span class="material-symbols-rounded" style="font-size:15px">auto_fix_high</span>JSONを各欄に展開</button>
-     </div>
-     <div class="know-paste-divider">または各項目を直接編集</div>
-     <label>概要（overview）</label>
-     <textarea id="kOverview" placeholder="何のサイト/ツールか">${esc(d.overview||"")}</textarea>
-     <label>要点（keyPoints・1行1項目）</label>
-     <textarea id="kKeyPoints" placeholder="要点を1行ずつ">${esc(kpText)}</textarea>
-     <label>使い方・コマンド（1行に「ラベル | 内容」）</label>
-     <textarea id="kUsage" placeholder="DB列挙 | sqlmap -r request.txt --dbs --batch">${esc(usageText)}</textarea>
-     <label>OSWAでの使いどころ（oswaTips）</label>
-     <textarea id="kOswaTips" placeholder="試験文脈での使い方">${esc(d.oswaTips||"")}</textarea>`,
-    () => {
-      const kp = val("kKeyPoints").split("\n").map(s=>s.trim()).filter(Boolean);
-      const usage = val("kUsage").split("\n").map(line=>{
-        const idx = line.indexOf("|");
-        if (idx < 0) return line.trim() ? { label:"", content:line.trim() } : null;
-        return { label: line.slice(0,idx).trim(), content: line.slice(idx+1).trim() };
-      }).filter(Boolean);
-      const overview = val("kOverview").trim();
-      const oswaTips = val("kOswaTips").trim();
-      // 全部空ならdetailを消す、そうでなければ設定
-      if (!overview && !kp.length && !usage.length && !oswaTips) {
-        k.detail = null;
-      } else {
-        k.detail = {
-          overview, keyPoints: kp, usage, oswaTips,
-          lastCurated: (k.detail && k.detail.lastCurated) || new Date().toISOString().slice(0,10),
-        };
-      }
-      if (knowView === "detail") renderKnowDetail(); else renderKnowledge();
-      toast("✅ まとめを更新しました");
-    },
-    { okText: "保存" });
+  window.__kdId = id;
+  window.__kd = {
+    overview: d.overview || "",
+    keyPoints: (d.keyPoints || []).slice(),
+    usage: (d.usage || []).map(u => ({ label: u.label || "", content: u.content || "" })),
+    oswaTips: d.oswaTips || "",
+  };
+  openModal("まとめを編集", kdBodyHtml(), () => kdCommit(), { okText: "保存" });
+  kdWire();
 }
 
-/* 貼り付けたJSONを各欄に展開 */
+/* エディタ本文HTML（__kd から生成） */
+function kdBodyHtml() {
+  const kd = window.__kd;
+  const kpRows = kd.keyPoints.map((p, i) => `
+    <div class="kd-row" data-dnd-id="kp${i}">
+      ${dndHandle('ドラッグで並び替え')}
+      <input class="kd-kp-input" value="${esc(p)}" placeholder="要点を1つ">
+      <button class="kd-del" title="削除" onclick="kdKpDel(${i})"><span class="material-symbols-rounded" style="font-size:18px">delete</span></button>
+    </div>`).join("");
+  const usageRows = kd.usage.map((u, i) => `
+    <div class="kd-usage-row" data-dnd-id="u${i}">
+      ${dndHandle('ドラッグで並び替え')}
+      <input class="kd-usage-label" value="${esc(u.label)}" placeholder="ラベル（例: DB列挙）">
+      <textarea class="kd-usage-content" placeholder="内容・コマンド（改行OK）">${esc(u.content)}</textarea>
+      <button class="kd-del" title="削除" onclick="kdUsageDel(${i})"><span class="material-symbols-rounded" style="font-size:18px">delete</span></button>
+    </div>`).join("");
+  return `
+    <div class="know-paste-zone">
+      <label style="display:flex;align-items:center;gap:8px">
+        <span class="material-symbols-rounded" style="font-size:16px;color:var(--md-primary)">content_paste</span>
+        JSONを貼り付けて各欄へ流し込む（任意）
+      </label>
+      <textarea id="kJson" placeholder='{"overview":"...","keyPoints":["..."],"usage":[{"label":"...","content":"..."}],"oswaTips":"..."}' style="min-height:70px;font-family:var(--font-mono);font-size:11px"></textarea>
+      <button class="know-paste-apply" onclick="kApplyJson()"><span class="material-symbols-rounded" style="font-size:15px">auto_fix_high</span>JSONをエディタに反映</button>
+    </div>
+    <div class="know-paste-divider">各項目を直接編集</div>
+
+    <label>概要（overview）</label>
+    <textarea id="kOverview" placeholder="何のサイト/ツールか">${esc(kd.overview)}</textarea>
+
+    <div class="kd-sec-label">要点（keyPoints）</div>
+    <div class="kd-list" data-dnd-group="kd-kp">${kpRows}</div>
+    <button class="kd-addbtn" onclick="kdKpAdd()"><span class="material-symbols-rounded" style="font-size:16px">add</span>要点を追加</button>
+
+    <div class="kd-sec-label">使い方・コマンド（usage）</div>
+    <div class="kd-list" data-dnd-group="kd-usage">${usageRows}</div>
+    <button class="kd-addbtn" onclick="kdUsageAdd()"><span class="material-symbols-rounded" style="font-size:16px">add</span>コマンドを追加</button>
+
+    <label style="margin-top:12px">使いどころ（oswaTips）</label>
+    <textarea id="kOswaTips" placeholder="使いどころ・注意点">${esc(kd.oswaTips)}</textarea>`;
+}
+
+/* モーダル本文を __kd から再描画（並び替え登録も更新） */
+function kdRender() {
+  const mb = document.getElementById("modalBody");
+  if (!mb) return;
+  mb.innerHTML = kdBodyHtml();
+  kdWire();
+}
+function kdWire() {
+  registerSortable("kd-kp",    () => { kdHarvest(); kdRender(); });
+  registerSortable("kd-usage", () => { kdHarvest(); kdRender(); });
+}
+
+/* 画面の現在値を __kd に取り込む（並び順もDOM順で確定） */
+function kdHarvest() {
+  const mb = document.getElementById("modalBody"); if (!mb) return;
+  window.__kd.overview = mb.querySelector("#kOverview")?.value ?? window.__kd.overview;
+  window.__kd.oswaTips = mb.querySelector("#kOswaTips")?.value ?? window.__kd.oswaTips;
+  window.__kd.keyPoints = [...mb.querySelectorAll(".kd-kp-input")].map(el => el.value);
+  window.__kd.usage = [...mb.querySelectorAll(".kd-usage-row")].map(r => ({
+    label:   r.querySelector(".kd-usage-label")?.value || "",
+    content: r.querySelector(".kd-usage-content")?.value || "",
+  }));
+}
+
+function kdKpAdd()   { kdHarvest(); window.__kd.keyPoints.push(""); kdRender(); }
+function kdKpDel(i)  { kdHarvest(); window.__kd.keyPoints.splice(i, 1); kdRender(); }
+function kdUsageAdd(){ kdHarvest(); window.__kd.usage.push({ label:"", content:"" }); kdRender(); }
+function kdUsageDel(i){ kdHarvest(); window.__kd.usage.splice(i, 1); kdRender(); }
+
+/* JSON貼り付け → __kd に反映（改行はcontentにそのまま入る） */
 function kApplyJson() {
   const raw = val("kJson").trim();
   if (!raw) { toast("JSONを貼り付けてください"); return; }
   let obj;
   try { obj = JSON.parse(raw); }
-  catch(e) { toast("⚠ JSONの形式が正しくありません"); return; }
-  // 各欄に流し込む
-  const setV = (id,v)=>{ const el=document.getElementById(id); if(el) el.value=v; };
-  setV("kOverview", obj.overview||"");
-  setV("kKeyPoints", Array.isArray(obj.keyPoints)?obj.keyPoints.join("\n"):"");
-  setV("kUsage", Array.isArray(obj.usage)?obj.usage.map(u=>`${u.label||""} | ${u.content||""}`).join("\n"):"");
-  setV("kOswaTips", obj.oswaTips||"");
-  toast("✅ 各欄に展開しました（保存で反映）");
+  catch (e) { toast("⚠ JSONの形式が正しくありません"); return; }
+  kdHarvest();
+  if (typeof obj.overview === "string") window.__kd.overview = obj.overview;
+  if (typeof obj.oswaTips === "string") window.__kd.oswaTips = obj.oswaTips;
+  if (Array.isArray(obj.keyPoints)) window.__kd.keyPoints = obj.keyPoints.map(String);
+  if (Array.isArray(obj.usage)) window.__kd.usage = obj.usage.map(u => ({
+    label: (u && u.label) ? String(u.label) : "",
+    content: (u && u.content != null) ? String(u.content) : "",
+  }));
+  kdRender();
+  toast("✅ エディタに反映しました（保存で確定）");
 }
 
-/* usage(使い方・コマンド)の並び替え */
-function kMoveUsage(id, i, dir) {
-  const k = data.knowledge.find(x=>x.id===id); if (!k || !k.detail || !Array.isArray(k.detail.usage)) return;
-  const arr = k.detail.usage;
-  const j = i + dir;
-  if (j < 0 || j >= arr.length) return;
-  [arr[i], arr[j]] = [arr[j], arr[i]];
-  renderKnowDetail();
+/* 保存 */
+function kdCommit() {
+  kdHarvest();
+  const k = data.knowledge.find(x => x.id === window.__kdId); if (!k) return;
+  const overview = (window.__kd.overview || "").trim();
+  const oswaTips = (window.__kd.oswaTips || "").trim();
+  const keyPoints = window.__kd.keyPoints.map(s => s.trim()).filter(Boolean);
+  const usage = window.__kd.usage
+    .map(u => ({ label: (u.label || "").trim(), content: u.content || "" }))
+    .filter(u => u.label || (u.content || "").trim());
+  if (!overview && !keyPoints.length && !usage.length && !oswaTips) {
+    k.detail = null;
+  } else {
+    k.detail = {
+      overview, keyPoints, usage, oswaTips,
+      lastCurated: (k.detail && k.detail.lastCurated) || new Date().toISOString().slice(0, 10),
+    };
+  }
+  if (knowView === "detail") renderKnowDetail(); else renderKnowledge();
+  toast("✅ まとめを更新しました");
+}
+
+/* 詳細画面から usage を個別に編集・追加・削除 */
+function kEditUsage(kid, uidv) {
+  const k = data.knowledge.find(x => x.id === kid); if (!k || !k.detail) return;
+  const u = (k.detail.usage || []).find(x => x.id === uidv); if (!u) return;
+  openModal("コマンドを編集",
+    `<label>ラベル</label><input id="kuLabel" value="${esc(u.label)}" placeholder="例: DB列挙">
+     <label>内容・コマンド（改行OK）</label>
+     <textarea id="kuContent" class="mono-input" style="min-height:140px;white-space:pre">${esc(u.content)}</textarea>`,
+    () => { u.label = val("kuLabel"); u.content = val("kuContent"); renderKnowDetail(); toast("✅ 更新しました"); },
+    { okText: "保存", extraBtns: [{ label: "削除", cls: "btn-text btn-danger", fn: () => { closeModal(); kDelUsage(kid, uidv); } }] });
+}
+function kDelUsage(kid, uidv) {
+  const k = data.knowledge.find(x => x.id === kid); if (!k || !k.detail) return;
+  const u = (k.detail.usage || []).find(x => x.id === uidv); if (!u) return;
+  if (!confirm(`コマンド「${u.label || u.content.slice(0,20)}」を削除しますか？`)) return;
+  k.detail.usage = k.detail.usage.filter(x => x.id !== uidv);
+  renderKnowDetail(); toast("🗑 削除しました");
+}
+function kAddUsage(kid) {
+  const k = data.knowledge.find(x => x.id === kid); if (!k) return;
+  if (!k.detail) k.detail = { overview:"", keyPoints:[], usage:[], oswaTips:"", lastCurated:new Date().toISOString().slice(0,10) };
+  openModal("コマンドを追加",
+    `<label>ラベル</label><input id="kuLabel" placeholder="例: DB列挙">
+     <label>内容・コマンド（改行OK）</label>
+     <textarea id="kuContent" class="mono-input" style="min-height:140px;white-space:pre" placeholder="sudo find / -name login.php 2>/dev/null"></textarea>`,
+    () => {
+      k.detail.usage.push({ id: "u" + uid(), label: val("kuLabel"), content: val("kuContent") });
+      renderKnowDetail(); toast("✅ 追加しました");
+    },
+    { okText: "追加" });
 }
 
 function renderKnowDetail() {
@@ -295,21 +387,27 @@ function renderKnowDetail() {
   const m = knowKindMeta(k.kind);
   const certs = (k.certs||[]).map(c=>`<span class="tool-cert-mini">${esc(c)}</span>`).join("");
 
+  // usage に安定IDを付与（並び替え・個別編集用）
+  (d.usage||[]).forEach(u => { if (!u.id) u.id = "u" + uid(); });
+
   const keyPoints = (d.keyPoints||[]).length
     ? `<div class="know-d-sec"><h4>要点</h4><ul class="know-d-list">${d.keyPoints.map(p=>`<li>${esc(p)}</li>`).join("")}</ul></div>` : "";
 
-  const usage = (d.usage||[]).length
-    ? `<div class="know-d-sec"><h4>使い方・コマンド</h4>${d.usage.map((u,i,arr)=>`
-        <div class="know-d-usage">
+  const usage = `<div class="know-d-sec">
+      <h4>使い方・コマンド</h4>
+      <div class="know-d-usages" data-dnd-group="know-usage:${k.id}">${(d.usage||[]).map(u=>`
+        <div class="know-d-usage" data-dnd-id="${u.id}">
           <div class="know-d-usage-label">
-            <span>${esc(u.label)}</span>
+            ${dndHandle('ドラッグで並び替え')}<span>${esc(u.label)}</span>
             <span class="know-d-usage-acts">
-              <button class="know-d-usage-act" onclick="kMoveUsage('${k.id}',${i},-1)" title="上へ" ${i===0?'disabled':''}><span class="material-symbols-rounded" style="font-size:14px">arrow_upward</span></button>
-              <button class="know-d-usage-act" onclick="kMoveUsage('${k.id}',${i},1)" title="下へ" ${i===arr.length-1?'disabled':''}><span class="material-symbols-rounded" style="font-size:14px">arrow_downward</span></button>
+              <button class="know-d-usage-act" onclick="kEditUsage('${k.id}','${u.id}')" title="このコマンドを編集"><span class="material-symbols-rounded" style="font-size:14px">edit</span></button>
+              <button class="know-d-usage-act danger" onclick="kDelUsage('${k.id}','${u.id}')" title="削除"><span class="material-symbols-rounded" style="font-size:14px">delete</span></button>
             </span>
           </div>
           <pre class="know-d-code">${esc(u.content)}<button class="tool-cmd-copy" onclick="event.stopPropagation();copyCell(event, ${escAttr(JSON.stringify(u.content))})" title="コピー"><span class="material-symbols-rounded" style="font-size:14px">content_copy</span></button></pre>
-        </div>`).join("")}</div>` : "";
+        </div>`).join("")}</div>
+      <button class="tool-add-cmd" onclick="kAddUsage('${k.id}')"><span class="material-symbols-rounded" style="font-size:15px">add</span>コマンドを追加</button>
+    </div>`;
 
   const oswaTips = d.oswaTips
     ? `<div class="know-d-sec"><h4>OSWAでの使いどころ</h4><div class="know-d-tips">${esc(d.oswaTips)}</div></div>` : "";
@@ -337,6 +435,12 @@ function renderKnowDetail() {
       </div>
     </div>
   `;
+
+  // 使い方・コマンドの並び替え
+  registerSortable("know-usage:" + k.id, ids => {
+    if (k.detail && Array.isArray(k.detail.usage)) reorderVisible(k.detail.usage, ids);
+    renderKnowDetail();
+  });
 }
 
 /* ═══════════════════════════════════════════════════

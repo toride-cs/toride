@@ -1639,6 +1639,28 @@ body.edit #editBanner { display: flex; }
 
 <div class="toast" id="toast"></div>
 
+<style id="dnd-css">
+.dnd-handle{cursor:grab;opacity:.4;font-size:18px;line-height:1;user-select:none;touch-action:none;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;flex:0 0 auto}
+.dnd-handle:hover{opacity:.9}
+.dnd-handle:active{cursor:grabbing}
+[data-dnd-id].dnd-dragging{opacity:.45;outline:2px dashed var(--md-primary);outline-offset:2px;border-radius:8px}
+[data-dnd-group]{min-height:2px}
+[data-dnd-id]{transition:outline-color .12s}
+/* ナレッジ構造化エディタ */
+.kd-list{display:flex;flex-direction:column;gap:8px;margin:4px 0 2px}
+.kd-row,.kd-usage-row{display:flex;gap:8px;align-items:flex-start;background:var(--md-surface-2,rgba(127,127,127,.06));border:1px solid var(--md-outline,rgba(127,127,127,.25));border-radius:10px;padding:8px}
+.kd-usage-row{flex-wrap:wrap}
+.kd-row .dnd-handle,.kd-usage-row .dnd-handle{margin-top:6px}
+.kd-row input{flex:1 1 auto}
+.kd-usage-label{flex:1 1 100%;font-weight:600}
+.kd-usage-content{flex:1 1 100%;min-height:64px;font-family:var(--font-mono);font-size:12px;white-space:pre}
+.kd-row .kd-del,.kd-usage-row .kd-del{flex:0 0 auto;background:none;border:none;color:var(--md-error,#c0392b);cursor:pointer;padding:4px;border-radius:6px}
+.kd-row .kd-del:hover,.kd-usage-row .kd-del:hover{background:rgba(192,57,43,.12)}
+.kd-addbtn{display:inline-flex;align-items:center;gap:6px;margin:6px 0 2px;padding:6px 12px;border:1px dashed var(--md-outline,rgba(127,127,127,.4));background:none;border-radius:8px;cursor:pointer;color:var(--md-primary);font:inherit}
+.kd-addbtn:hover{background:var(--md-surface-2,rgba(127,127,127,.08))}
+.kd-sec-label{font-size:12px;font-weight:600;opacity:.7;margin:10px 0 2px}
+.know-d-usage-label .dnd-handle,.tool-cmd-label .dnd-handle,.cmd-variant-head .dnd-handle,.al-step .dnd-handle,.meth-step .dnd-handle,.meth-section-head .dnd-handle,.know-card .dnd-handle{margin-right:2px}
+</style>
 <script src="app.js"></script>
 <script src="attacklog.js"></script>
 <script src="huntlog.js"></script>

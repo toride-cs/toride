@@ -51,30 +51,32 @@ function renderMethodology() {
   const certTabs = certs.map(certTab).join("")
     + `<button class="tool-cert-tab meth-cert-add" onclick="mAddCert()" title="資格タブを追加"><span class="material-symbols-rounded" style="font-size:16px">add</span></button>`;
 
-  // セクション（アコーディオン）
-  const sections = [];
+  // セクション（アコーディオン）— メソドロジー単位で並び替えグループを作る
+  const groups = [];
   list.forEach(m => {
-    m.sections.forEach((s, si, sarr) => {
+    const secHtml = m.sections.map((s, si, sarr) => {
       const done = s.steps.filter(st=>methChecked[st.id]).length;
       const open = methOpenSections[s.id];
       const stepsHtml = open ? s.steps.map((st,sti,starr) => renderMethStep(st, m.id, s.id, sti, starr.length)).join("") : "";
-      sections.push(`
-        <div class="meth-section ${open?'open':''}">
+      return `
+        <div class="meth-section ${open?'open':''}" data-dnd-id="${s.id}">
           <button class="meth-section-head" onclick="mToggleSection('${s.id}')">
+            ${dndHandle('ドラッグで節を並び替え')}
             <span class="material-symbols-rounded meth-chevron">${open?'expand_more':'chevron_right'}</span>
             <span class="meth-section-label">${esc(s.label)}</span>
             ${s.trigger?`<span class="meth-section-trigger">${esc(s.trigger)}</span>`:""}
             <span class="meth-section-prog ${done===s.steps.length&&done>0?'complete':''}">${done}/${s.steps.length}</span>
-            <span class="meth-section-move" onclick="event.stopPropagation();mMoveSection('${m.id}','${s.id}',-1)" title="節を上へ" ${si===0?'style="opacity:.3;pointer-events:none"':''}><span class="material-symbols-rounded" style="font-size:15px">arrow_upward</span></span>
-            <span class="meth-section-move" onclick="event.stopPropagation();mMoveSection('${m.id}','${s.id}',1)" title="節を下へ" ${si===sarr.length-1?'style="opacity:.3;pointer-events:none"':''}><span class="material-symbols-rounded" style="font-size:15px">arrow_downward</span></span>
             <span class="meth-section-edit" onclick="event.stopPropagation();mEditSection('${s.id}')" title="節を編集"><span class="material-symbols-rounded" style="font-size:15px">edit</span></span>
           </button>
-          ${open?`<div class="meth-section-body">${stepsHtml}
+          ${open?`<div class="meth-section-body">
+            <div class="meth-steps" data-dnd-group="meth-steps:${s.id}">${stepsHtml}</div>
             <button class="meth-add-step" onclick="mAddStep('${s.id}')"><span class="material-symbols-rounded" style="font-size:15px">add</span>手法を追加</button>
           </div>`:""}
-        </div>`);
-    });
+        </div>`;
+    }).join("");
+    groups.push(`<div class="meth-secs" data-dnd-group="meth-secs:${m.id}">${secHtml}</div>`);
   });
+  const sections = groups; // 描画用
 
   main.innerHTML = `
     <div class="s-head">
@@ -92,23 +94,30 @@ function renderMethodology() {
     ${sections.length ? `<div class="meth-sections">${sections.join("")}</div>`
       : emptyState("account_tree", "この資格のメソドロジーがまだありません", "「節を追加」で作成できます")}
   `;
+
+  // 並び替え登録：節（メソドロジー単位）と、各節内の手法
+  list.forEach(m => {
+    registerSortable("meth-secs:" + m.id, ids => { reorderVisible(m.sections, ids); renderMethodology(); });
+    m.sections.forEach(s => {
+      registerSortable("meth-steps:" + s.id, ids => { reorderVisible(s.steps, ids); renderMethodology(); });
+    });
+  });
 }
 
 function renderMethStep(st, mId, sId, idx, total) {
   const checked = !!methChecked[st.id];
   const cmd = st.command;
   const canMove = (mId !== undefined && total !== undefined);
-  const moveBtns = canMove ? `
-            <button class="meth-step-act" onclick="mMoveStep('${mId}','${sId}',${idx},-1)" title="上へ" ${idx===0?'disabled':''}><span class="material-symbols-rounded" style="font-size:13px">arrow_upward</span></button>
-            <button class="meth-step-act" onclick="mMoveStep('${mId}','${sId}',${idx},1)" title="下へ" ${idx===total-1?'disabled':''}><span class="material-symbols-rounded" style="font-size:13px">arrow_downward</span></button>` : "";
+  const handle = canMove ? dndHandle('ドラッグで手法を並び替え') : "";
   return `
-    <div class="meth-step ${checked?'checked':''}">
+    <div class="meth-step ${checked?'checked':''}" ${canMove?`data-dnd-id="${st.id}"`:""}>
+      ${handle}
       <button class="meth-check" onclick="mToggleCheck('${st.id}')" title="チェック">
         <span class="material-symbols-rounded">${checked?'check_box':'check_box_outline_blank'}</span>
       </button>
       <div class="meth-step-body">
         <div class="meth-step-label">${esc(st.label)}
-          <span class="meth-step-acts">${moveBtns}
+          <span class="meth-step-acts">
             <button class="meth-step-act" onclick="mEditStep('${st.id}')" title="編集"><span class="material-symbols-rounded" style="font-size:13px">edit</span></button>
             <button class="meth-step-act danger" onclick="mDelStep('${st.id}')" title="削除"><span class="material-symbols-rounded" style="font-size:13px">delete</span></button>
           </span>

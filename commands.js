@@ -79,10 +79,15 @@ function renderCommands() {
       <button class="th-chip ${!cmdCatFilter?'on':''}" onclick="cmdSetCat(null)">すべて</button>
       ${catChips}
     </div>
-    ${list.length ? `<div class="tool-grid">${list.map(renderCommandCard).join("")}</div>`
+    ${list.length ? `<div class="tool-grid" data-dnd-group="cmd-list">${list.map(renderCommandCard).join("")}</div>`
       : emptyState("terminal", data.commands.length?"該当するコマンドがありません":"コマンドがまだありません",
           data.commands.length?"フィルタを変えてください":"「コマンドを追加」で登録できます")}
   `;
+
+  // 項目カードの並び替え（フィルタ表示中は表示分のみ入れ替え）
+  registerSortable("cmd-list", ids => { reorderVisible(data.commands, ids); renderCommands(); });
+  // 各項目内のOS別コマンドの並び替え
+  list.forEach(c => registerSortable("cmd-vars:" + c.id, ids => { reorderVisible(c.variants, ids); renderCommands(); }));
 }
 
 function renderCommandCard(c) {
@@ -96,12 +101,10 @@ function renderCommandCard(c) {
     const osm = cmdOsMeta(v.os);
     const dim = (cmdOsFilter !== "all" && v.os !== cmdOsFilter) ? " cmd-variant-dim" : "";
     return `
-      <div class="cmd-variant${dim}">
+      <div class="cmd-variant${dim}" data-dnd-id="${v.id}">
         <div class="cmd-variant-head">
-          <span class="cmd-os-badge" style="--os:${osm.color}">${esc(v.os)}</span>
+          ${dndHandle('ドラッグでコマンドを並び替え')}<span class="cmd-os-badge" style="--os:${osm.color}">${esc(v.os)}</span>
           <span class="cmd-variant-acts">
-            <button class="tool-cmd-act" onclick="cmdMoveVariant('${c.id}','${v.id}',-1)" title="上へ" ${i===0?'disabled':''}><span class="material-symbols-rounded" style="font-size:13px">arrow_upward</span></button>
-            <button class="tool-cmd-act" onclick="cmdMoveVariant('${c.id}','${v.id}',1)" title="下へ" ${i===arr.length-1?'disabled':''}><span class="material-symbols-rounded" style="font-size:13px">arrow_downward</span></button>
             <button class="tool-cmd-act" onclick="cmdEditVariant('${c.id}','${v.id}')" title="編集"><span class="material-symbols-rounded" style="font-size:13px">edit</span></button>
             <button class="tool-cmd-act danger" onclick="cmdDelVariant('${c.id}','${v.id}')" title="削除"><span class="material-symbols-rounded" style="font-size:13px">delete</span></button>
           </span>
@@ -114,9 +117,9 @@ function renderCommandCard(c) {
   const tags = (c.tags||[]).map(t=>`<span class="mini-tag">#${esc(t)}</span>`).join("");
 
   return `
-    <div class="tool-card cmd-card" style="cursor:default">
+    <div class="tool-card cmd-card" style="cursor:default" data-dnd-id="${c.id}">
       <div class="tool-card-top">
-        <h3 style="font-size:15.5px">${esc(c.title)}</h3>
+        ${dndHandle('ドラッグで項目を並び替え')}<h3 style="font-size:15.5px">${esc(c.title)}</h3>
         <span class="cmd-card-acts">
           <button class="tool-cmd-act" onclick="cmdEdit('${c.id}')" title="項目を編集"><span class="material-symbols-rounded" style="font-size:14px">edit</span></button>
           <button class="tool-cmd-act danger" onclick="cmdDel('${c.id}')" title="項目を削除"><span class="material-symbols-rounded" style="font-size:14px">delete</span></button>
@@ -126,7 +129,7 @@ function renderCommandCard(c) {
         <span class="tool-cat-tag">${esc(c.category)}</span>${tags}
       </div>
       ${c.desc?`<div class="cmd-desc">${renderMd(esc(c.desc))}</div>`:""}
-      <div class="cmd-variants">${vHtml}</div>
+      <div class="cmd-variants" data-dnd-group="cmd-vars:${c.id}">${vHtml}</div>
       <button class="tool-add-cmd" onclick="cmdAddVariant('${c.id}')"><span class="material-symbols-rounded" style="font-size:15px">add</span>OS別コマンドを追加</button>
     </div>`;
 }

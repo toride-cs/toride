@@ -1638,3 +1638,81 @@ function escAttr(s) { return esc(s).replace(/'/g,"&#39;"); }
 function val(id)    { return document.getElementById(id)?.value ?? ""; }
 function curTab()   { return data.tabs.find(t => t.id === activeId); }
 function yyyymmdd() { return new Date().toISOString().slice(0,10); }
+
+/* ═══════════════════════════════════════════════════
+   DRAG & DROP 並び替え（共通エンジン）
+   使い方:
+     ・並び替えたいリスト要素に  data-dnd-group="<name>"
+     ・各アイテム(そのリストの直下の子)に  data-dnd-id="<id>"  と  .dnd-handle 要素
+     ・registerSortable("<name>", ids => {...}) で「確定した並び(id配列)」を受け取り反映
+   ハンドル(.dnd-handle)を掴んだ時だけドラッグ開始する（クリックや選択を邪魔しない）
+════════════════════════════════════════════════════ */
+(function () {
+  const reg = {};
+  window.registerSortable = (name, fn) => { reg[name] = fn; };
+  let src = null, grp = null, grpName = null;
+  const directItems = g => [...g.children].filter(el => el.getAttribute && el.getAttribute("data-dnd-id") != null);
+
+  document.addEventListener("mousedown", e => {
+    const h = e.target.closest && e.target.closest(".dnd-handle");
+    if (!h) return;
+    const item = h.closest("[data-dnd-id]");
+    if (item) item.setAttribute("draggable", "true");   // ハンドル押下時だけ draggable 化
+  });
+  document.addEventListener("mouseup", () => {
+    document.querySelectorAll('[data-dnd-id][draggable="true"]').forEach(el => {
+      if (!el.classList.contains("dnd-dragging")) el.removeAttribute("draggable");
+    });
+  });
+  document.addEventListener("dragstart", e => {
+    const item = e.target.closest && e.target.closest("[data-dnd-id]");
+    if (!item || item.getAttribute("draggable") !== "true") return;
+    src = item;
+    grp = item.closest("[data-dnd-group]");
+    grpName = grp ? grp.getAttribute("data-dnd-group") : null;
+    item.classList.add("dnd-dragging");
+    if (e.dataTransfer) { e.dataTransfer.effectAllowed = "move"; try { e.dataTransfer.setData("text/plain", "dnd"); } catch (_) {} }
+  });
+  document.addEventListener("dragover", e => {
+    if (!src || !grp) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    const over = e.target.closest && e.target.closest("[data-dnd-id]");
+    if (!over || over === src) return;
+    if (over.closest("[data-dnd-group]") !== grp) return; // 別グループ上は無視（入れ子対応）
+    const r = over.getBoundingClientRect();
+    const after = (e.clientY - r.top) / r.height > 0.5;
+    grp.insertBefore(src, after ? over.nextElementSibling : over);
+  });
+  document.addEventListener("drop", e => { if (src) e.preventDefault(); });
+  document.addEventListener("dragend", () => {
+    if (!src) return;
+    src.classList.remove("dnd-dragging");
+    src.removeAttribute("draggable");
+    if (grp && grpName && reg[grpName]) {
+      const ids = directItems(grp).map(el => el.getAttribute("data-dnd-id"));
+      try { reg[grpName](ids); } catch (err) { console.error("[dnd]", err); }
+    }
+    src = null; grp = null; grpName = null;
+  });
+})();
+
+/* 配列 arr を、表示中の並び(orderedIds)に合わせて“その場”で並び替える。
+   フィルタ表示中でも、表示に含まれない要素は元の位置を保つ。 */
+function reorderVisible(arr, orderedIds) {
+  if (!Array.isArray(arr)) return;
+  const byId = new Map(arr.map(x => [String(x.id), x]));
+  const vis = new Set(orderedIds.map(String));
+  let k = 0;
+  for (let i = 0; i < arr.length; i++) {
+    if (vis.has(String(arr[i].id))) {
+      const nx = byId.get(String(orderedIds[k++]));
+      if (nx) arr[i] = nx;
+    }
+  }
+}
+
+/* 並び替えハンドルのHTMLを返す共通ヘルパ */
+function dndHandle(title) {
+  return `<span class="dnd-handle material-symbols-rounded" title="${esc(title||'ドラッグで並び替え')}" onclick="event.stopPropagation()" onmousedown="this.closest('[data-dnd-id]')&&this.closest('[data-dnd-id]').setAttribute('draggable','true')">drag_indicator</span>`;
+}
