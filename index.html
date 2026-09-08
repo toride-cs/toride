@@ -1660,6 +1660,33 @@ body.edit #editBanner { display: flex; }
 .kd-addbtn:hover{background:var(--md-surface-2,rgba(127,127,127,.08))}
 .kd-sec-label{font-size:12px;font-weight:600;opacity:.7;margin:10px 0 2px}
 .know-d-usage-label .dnd-handle,.tool-cmd-label .dnd-handle,.cmd-variant-head .dnd-handle,.al-step .dnd-handle,.meth-step .dnd-handle,.meth-section-head .dnd-handle,.know-card .dnd-handle{margin-right:2px}
+
+/* ── チートシート: 編集操作 / ドラッグ&ドロップの見た目 ── */
+.cat-card,.sheet-card{cursor:pointer}
+/* カード上部の編集ツール列（編集モードのみ表示） */
+.cs-card-tools{align-items:center;gap:2px;margin:-6px -6px 2px}
+.cs-card-tools .dnd-handle{opacity:.55}
+.cs-tools-spacer{flex:1 1 auto}
+.cs-tool-btn{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;color:var(--md-on-surface-var);background:none;border:none;cursor:pointer;transition:background .12s,color .12s}
+.cs-tool-btn:hover{background:var(--md-surface-2)}
+.cs-tool-btn .material-symbols-rounded{font-size:19px}
+.cs-tool-btn.danger:hover{background:#fde8e6;color:var(--md-error)}
+[data-theme="dark"] .cs-tool-btn.danger:hover{background:#3b1a17}
+/* カードをドラッグ中は浮かせる */
+.cat-card.dnd-dragging,.sheet-card.dnd-dragging,.block.dnd-dragging{opacity:.6;box-shadow:var(--shadow-3)}
+/* 表(ブロック)ヘッダーのドラッグハンドル（編集モードのみ） */
+.block-head .dnd-handle{display:none;margin-right:2px}
+body.edit .block-head .dnd-handle{display:inline-flex}
+.cs-blocks{display:block}
+/* 行のドラッグハンドル */
+.row-grip{font-size:18px;color:var(--md-on-surface-var)}
+tr.dnd-dragging{background:var(--md-surface-2)}
+tr.dnd-dragging td{background:var(--md-surface-2)}
+/* 追加バー */
+.cs-add-bar{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:24px}
+/* モーダル内ラジオ */
+.cs-radio{display:flex;gap:10px;align-items:flex-start;padding:8px 4px;font-size:14px;line-height:1.6;cursor:pointer}
+.cs-radio input{margin-top:3px}
 </style>
 <script src="app.js"></script>
 <script src="attacklog.js"></script>

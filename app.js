@@ -243,6 +243,28 @@ function normalizeData() {
   });
   if (!Array.isArray(data.tabs)) data.tabs = [];
 
+  // ── カテゴリのメタ情報 / 並び順（自由な追加・編集・並び替えを永続化） ──
+  ensureCat();
+  {
+    const discovered = new Set(data.tabs.map(t => t.category || "未分類"));
+    // 既定メタ(CAT_META)は未定義のカテゴリにだけ取り込む（既存のユーザー編集を尊重）
+    [...CAT_ORDER, ...discovered].forEach(c => {
+      if (!data.catMeta[c]) {
+        const dm = CAT_META[c];
+        data.catMeta[c] = dm ? { icon: dm.icon, desc: dm.desc } : { icon: "📁", desc: "" };
+      }
+    });
+    if (!data.catMeta["未分類"]) data.catMeta["未分類"] = { icon: "📥", desc: "あとで振り分け" };
+    // 並び順：既存 catOrder を尊重しつつ、既定順→発見順→メタ定義順で欠けを補完
+    const seen = new Set(), order = [];
+    const push = c => { if (c != null && !seen.has(c)) { seen.add(c); order.push(c); } };
+    data.catOrder.forEach(push);
+    CAT_ORDER.forEach(c => { if (discovered.has(c) || data.catMeta[c]) push(c); });
+    [...discovered].forEach(push);
+    Object.keys(data.catMeta).forEach(push);
+    data.catOrder = order;
+  }
+
   // ── ログブック（新規・後方互換） ──
   if (!Array.isArray(data.phases) || !data.phases.length) {
     data.phases = JSON.parse(JSON.stringify(DEFAULT_PHASES));
@@ -583,16 +605,26 @@ function normalizeData() {
   });
 }
 
-/* categories present in data, ordered */
+/* カテゴリのメタ/順序ストアを保証（後方互換の安全網） */
+function ensureCat() {
+  if (typeof data.catMeta !== "object" || data.catMeta === null || Array.isArray(data.catMeta)) data.catMeta = {};
+  if (!Array.isArray(data.catOrder)) data.catOrder = [];
+}
+/* categories present (user-defined order; 空カテゴリも保持) */
 function categories() {
-  const set = new Set(data.tabs.map(t => t.category || "未分類"));
-  const ordered = CAT_ORDER.filter(c => set.has(c));
-  // any unknown categories appended
-  [...set].forEach(c => { if (!ordered.includes(c)) ordered.push(c); });
-  return ordered;
+  ensureCat();
+  const order = data.catOrder.slice();
+  const seen = new Set(order);
+  // データ上に存在するが順序リストに無いものを末尾へ補完
+  data.tabs.forEach(t => { const c = t.category || "未分類"; if (!seen.has(c)) { seen.add(c); order.push(c); } });
+  return order;
 }
 function tabsInCat(cat) { return data.tabs.filter(t => (t.category||"未分類") === cat); }
-function catMeta(cat) { return CAT_META[cat] || { icon: "📁", desc: "" }; }
+function catMeta(cat) {
+  ensureCat();
+  const m = data.catMeta[cat] || CAT_META[cat];
+  return m ? { icon: m.icon || "📁", desc: m.desc || "" } : { icon: "📁", desc: "" };
+}
 
 /* ═══════════════════════════════════════════════════
    NAVIGATION
@@ -730,7 +762,13 @@ function renderHome() {
     const list = tabsInCat(cat);
     const blocks = list.reduce((s,t)=>s+(t.blocks?.length||0),0);
     return `
-      <button class="cat-card" onclick="openCategory('${escAttr(cat)}')">
+      <div class="cat-card" data-dnd-id="${escAttr(cat)}" onclick="openCategory('${escAttr(cat)}')">
+        <div class="cs-card-tools edit-only">
+          ${dndHandle('ドラッグでカテゴリを並び替え')}
+          <span class="cs-tools-spacer"></span>
+          <button class="cs-tool-btn" title="カテゴリを編集" onclick="event.stopPropagation();editCategory('${escAttr(cat)}')"><span class="material-symbols-rounded">edit</span></button>
+          <button class="cs-tool-btn danger" title="カテゴリを削除" onclick="event.stopPropagation();deleteCategory('${escAttr(cat)}')"><span class="material-symbols-rounded">delete</span></button>
+        </div>
         <div class="cat-card-head">
           <div class="cat-badge">${m.icon}</div>
           <div>
@@ -742,7 +780,7 @@ function renderHome() {
           <span>${list.length} シート · ${blocks} 表</span>
           <span class="material-symbols-rounded arrow">arrow_forward</span>
         </div>
-      </button>`;
+      </div>`;
   }).join("");
 
   main.innerHTML = `
@@ -751,9 +789,21 @@ function renderHome() {
       <div class="page-title">チートシート</div>
       <div class="page-sub">資格・ジャンルごとに整理されたチートシート集。上部の検索は全体を横断します。</div>
     </div>
-    <div class="card-grid">${cards}</div>
-    ${editMode ? `<div style="margin-top:24px"><button class="btn btn-tonal" onclick="addTab()"><span class="material-symbols-rounded">add</span>新しいシートを追加</button></div>` : ""}
+    <div class="card-grid" data-dnd-group="cs-cats">${cards}</div>
+    ${editMode ? `<div class="cs-add-bar">
+        <button class="btn btn-tonal" onclick="addCategory()"><span class="material-symbols-rounded">create_new_folder</span>カテゴリを追加</button>
+        <button class="btn btn-tonal" onclick="addTab()"><span class="material-symbols-rounded">add</span>シートを追加</button>
+      </div>` : ""}
   `;
+
+  registerSortable("cs-cats", ids => {
+    ensureCat();
+    const known = new Set(ids);
+    const rest = data.catOrder.filter(c => !known.has(c));
+    data.catOrder = [...ids, ...rest];
+    renderHome(); renderNav();
+    toast("↕ カテゴリを並び替えました");
+  });
 }
 
 /* ── CATEGORY: sheet cards ── */
@@ -768,7 +818,14 @@ function renderCategory() {
     const emoji = leadingEmoji(t.label) || m.icon;
     const name = stripEmoji(t.label);
     return `
-      <button class="sheet-card" onclick="switchTab('${t.id}')">
+      <div class="sheet-card" data-dnd-id="${t.id}" onclick="switchTab('${t.id}')">
+        <div class="cs-card-tools edit-only">
+          ${dndHandle('ドラッグでシートを並び替え')}
+          <span class="cs-tools-spacer"></span>
+          <button class="cs-tool-btn" title="シート名を編集" onclick="event.stopPropagation();editSheetLabel('${t.id}')"><span class="material-symbols-rounded">edit</span></button>
+          <button class="cs-tool-btn" title="カテゴリを変更" onclick="event.stopPropagation();changeTabCategory('${t.id}')"><span class="material-symbols-rounded">drive_file_move</span></button>
+          <button class="cs-tool-btn danger" title="シートを削除" onclick="event.stopPropagation();deleteTab('${t.id}')"><span class="material-symbols-rounded">delete</span></button>
+        </div>
         <div class="sheet-card-head">
           <span class="sheet-emoji">${emoji}</span>
           <div>
@@ -777,7 +834,7 @@ function renderCategory() {
           </div>
         </div>
         ${tags.length ? `<div class="sheet-card-tags">${tags.map(tg=>`<span class="mini-tag">#${esc(tg)}</span>`).join("")}</div>` : ""}
-      </button>`;
+      </div>`;
   }).join("");
 
   main.innerHTML = `
@@ -787,10 +844,19 @@ function renderCategory() {
       <div class="page-title"><span>${m.icon}</span>${esc(activeCat)}</div>
       <div class="page-sub">${esc(m.desc)} · ${list.length} シート</div>
     </div>
-    ${list.length ? `<div class="card-grid">${cards}</div>`
+    ${editMode ? `<div class="section-actions">
+        <button class="btn btn-text" onclick="editCategory('${escAttr(activeCat)}')"><span class="material-symbols-rounded">edit</span>カテゴリ編集</button>
+      </div>` : ""}
+    ${list.length ? `<div class="card-grid" data-dnd-group="cs-sheets:${escAttr(activeCat)}">${cards}</div>`
       : emptyState("folder_open","このカテゴリは空です","編集モードでシートを追加できます")}
-    ${editMode ? `<div style="margin-top:24px"><button class="btn btn-tonal" onclick="addTab('${escAttr(activeCat)}')"><span class="material-symbols-rounded">add</span>このカテゴリにシートを追加</button></div>` : ""}
+    ${editMode ? `<div class="cs-add-bar"><button class="btn btn-tonal" onclick="addTab('${escAttr(activeCat)}')"><span class="material-symbols-rounded">add</span>このカテゴリにシートを追加</button></div>` : ""}
   `;
+
+  registerSortable("cs-sheets:" + activeCat, ids => {
+    reorderVisible(data.tabs, ids);
+    renderCategory(); renderNav();
+    toast("↕ シートを並び替えました");
+  });
 }
 
 /* ── SHEET: blocks/tables ── */
@@ -815,7 +881,8 @@ function renderSheet() {
     if (activeTag && !(blk.tags||[]).includes(activeTag)) return;
     blocksHtml += renderBlock(tab, blk, bi);
   });
-  if (!(tab.blocks||[]).length) {
+  const hasBlocks = !!(tab.blocks||[]).length;
+  if (!hasBlocks) {
     blocksHtml = emptyState("table_chart","表がありません","編集モードで「表を追加」してください");
   }
 
@@ -831,15 +898,34 @@ function renderSheet() {
     <div class="section-actions">
       <button class="btn btn-tonal" onclick="switchTab('${activeId}');" style="pointer-events:none;opacity:.0;width:0;padding:0;margin:0"></button>
       ${editMode ? `
-        <button class="btn btn-outlined" onclick="openImport()"><span class="material-symbols-rounded">upload_file</span>インポート</button>
         <button class="btn btn-filled" onclick="addBlock()"><span class="material-symbols-rounded">add</span>表を追加</button>
+        <button class="btn btn-outlined" onclick="openImport()"><span class="material-symbols-rounded">upload_file</span>インポート</button>
+        <button class="btn btn-text" onclick="editSheetLabel('${activeId}')"><span class="material-symbols-rounded">edit</span>シート名</button>
         <button class="btn btn-text" onclick="changeTabCategory('${activeId}')"><span class="material-symbols-rounded">drive_file_move</span>カテゴリ変更</button>
+        <button class="btn btn-text btn-danger" onclick="deleteTab('${activeId}')"><span class="material-symbols-rounded">delete</span>シート削除</button>
       ` : ""}
     </div>
     ${tagBar}
-    ${blocksHtml}
+    ${hasBlocks ? `<div class="cs-blocks" data-dnd-group="cs-blocks:${tab.id}">${blocksHtml}</div>` : blocksHtml}
   `;
   bindEditableHandlers();
+  bindSheetSortables(tab);
+}
+
+/* シート内: 表(ブロック)と各表の行の DnD 並び替えを登録 */
+function bindSheetSortables(tab) {
+  registerSortable("cs-blocks:" + tab.id, ids => {
+    reorderVisible(tab.blocks, ids);
+    renderSheet();
+    toast("↕ 表を並び替えました");
+  });
+  (tab.blocks||[]).forEach((blk, bi) => {
+    registerSortable("cs-rows:" + tab.id + ":" + bi, ids => {
+      reorderByIndex(blk.rows, ids);
+      renderSheet();
+      toast("↕ 行を並び替えました");
+    });
+  });
 }
 
 function renderBlock(tab, blk, bi) {
@@ -859,12 +945,11 @@ function renderBlock(tab, blk, bi) {
         ${copyBtn}
       </td>`;
     }).join("");
-    return `<tr data-bi="${bi}" data-ri="${ri}">
+    return `<tr data-bi="${bi}" data-ri="${ri}" data-dnd-id="${ri}">
       ${cells}
       <td class="row-act edit-only">
         <div class="row-btns">
-          <button class="rbtn" onclick="moveRow(${bi},${ri},-1)" title="上へ"><span class="material-symbols-rounded">arrow_upward</span></button>
-          <button class="rbtn" onclick="moveRow(${bi},${ri},1)" title="下へ"><span class="material-symbols-rounded">arrow_downward</span></button>
+          <span class="dnd-handle row-grip material-symbols-rounded" title="ドラッグで行を並び替え" onmousedown="this.closest('[data-dnd-id]')&&this.closest('[data-dnd-id]').setAttribute('draggable','true')">drag_indicator</span>
           <button class="rbtn rbtn-del" onclick="delRow(${bi},${ri})" title="削除"><span class="material-symbols-rounded">delete</span></button>
         </div>
       </td>
@@ -875,8 +960,9 @@ function renderBlock(tab, blk, bi) {
     `<span class="blk-tag" onclick="filterTag('${escAttr(t)}')">#${esc(t)}</span>`).join("");
 
   return `
-    <div class="block" data-bi="${bi}">
+    <div class="block" data-bi="${bi}" data-dnd-id="${blk.id}">
       <div class="block-head">
+        ${dndHandle('ドラッグで表を並び替え')}
         <div class="block-label editable" data-bi="${bi}" data-field="label">${esc(blk.label)}</div>
         ${blkTags ? `<div class="blk-tags">${blkTags}</div>` : ""}
         <div class="block-actions">
@@ -898,7 +984,7 @@ function renderBlock(tab, blk, bi) {
       <div class="tbl-wrap">
         <table>
           <thead><tr>${thCols}<th class="edit-only" style="width:60px"></th></tr></thead>
-          <tbody>${tbRows}</tbody>
+          <tbody data-dnd-group="cs-rows:${tab.id}:${bi}">${tbRows}</tbody>
         </table>
       </div>
       <button class="add-row-btn" onclick="addRow(${bi})"><span class="material-symbols-rounded">add</span>行を追加</button>
@@ -1254,6 +1340,7 @@ function addTab(presetCat) {
     () => {
       let cat = val("mCat");
       if (cat === "__new__") { cat = prompt("新しいカテゴリ名")?.trim() || "未分類"; }
+      registerCategory(cat);
       const t = {
         id: uid(), label: val("mLabel") || "新しいシート",
         title: val("mTitle") || "// NEW", subtitle: val("mSub") || "",
@@ -1282,9 +1369,119 @@ function changeTabCategory(id) {
     () => {
       let cat = val("mCat");
       if (cat === "__new__") { cat = prompt("新しいカテゴリ名")?.trim() || tab.category; }
+      registerCategory(cat);
       tab.category = cat; activeCat = cat;
-      renderSheet(); renderNav(); toast("✅ カテゴリを変更しました");
+      render(); renderNav(); toast("✅ カテゴリを変更しました");
     });
+}
+
+/* ═══════════════════════════════════════════════════
+   CATEGORY CRUD（カテゴリの自由な追加・編集・削除）
+════════════════════════════════════════════════════ */
+function registerCategory(name, meta) {
+  ensureCat();
+  if (name == null || name === "") return;
+  if (!data.catMeta[name]) data.catMeta[name] = meta || { icon: "📁", desc: "" };
+  if (!data.catOrder.includes(name)) data.catOrder.push(name);
+}
+function addCategory() {
+  ensureCat();
+  openModal("カテゴリを追加",
+    `<label>カテゴリ名</label>
+     <input id="mCat" placeholder="例: OSCP">
+     <label>アイコン（絵文字1つ）</label>
+     <input id="mIcon" placeholder="🗂" maxlength="4">
+     <label>説明</label>
+     <input id="mDesc" placeholder="例: 攻撃系リファレンス">`,
+    null, { okText: "追加", onOk: () => {
+      const name = (val("mCat") || "").trim();
+      if (!name) { toast("❌ カテゴリ名を入力してください"); return; }
+      if (data.catMeta[name] || categories().includes(name)) { toast("❌ 同名のカテゴリが既にあります"); return; }
+      registerCategory(name, { icon: (val("mIcon") || "📁").trim() || "📁", desc: (val("mDesc") || "").trim() });
+      closeModal();
+      openCategory(name);
+      toast("✅ カテゴリを追加しました");
+    }});
+}
+function editCategory(cat) {
+  ensureCat();
+  const meta = catMeta(cat);
+  openModal("カテゴリを編集",
+    `<label>カテゴリ名</label>
+     <input id="mCat" value="${escAttr(cat)}">
+     <label>アイコン（絵文字1つ）</label>
+     <input id="mIcon" value="${escAttr(meta.icon)}" maxlength="4">
+     <label>説明</label>
+     <input id="mDesc" value="${escAttr(meta.desc)}">`,
+    null, { okText: "保存", onOk: () => {
+      const name = (val("mCat") || "").trim();
+      if (!name) { toast("❌ カテゴリ名を入力してください"); return; }
+      if (name !== cat && (data.catMeta[name] || categories().includes(name))) { toast("❌ 同名のカテゴリが既にあります"); return; }
+      const newMeta = { icon: (val("mIcon") || "📁").trim() || "📁", desc: (val("mDesc") || "").trim() };
+      if (name !== cat) {
+        // リネーム：全シートの category を張り替え、順序とメタのキーを移す
+        data.tabs.forEach(t => { if ((t.category || "未分類") === cat) t.category = name; });
+        delete data.catMeta[cat];
+        data.catMeta[name] = newMeta;
+        const i = data.catOrder.indexOf(cat);
+        if (i >= 0) data.catOrder[i] = name; else data.catOrder.push(name);
+        if (activeCat === cat) activeCat = name;
+      } else {
+        data.catMeta[cat] = newMeta;
+      }
+      closeModal();
+      render(); renderNav();
+      toast("✅ カテゴリを更新しました");
+    }});
+}
+function deleteCategory(cat) {
+  ensureCat();
+  const FALLBACK = "未分類";
+  const list = tabsInCat(cat);
+  if (cat === FALLBACK && list.length) { toast("❌ 「未分類」は空にしてからでないと削除できません"); return; }
+
+  if (!list.length) {
+    if (!confirm(`空のカテゴリ「${cat}」を削除しますか？`)) return;
+    delete data.catMeta[cat];
+    data.catOrder = data.catOrder.filter(c => c !== cat);
+    if (activeCat === cat) goHome(); else { render(); renderNav(); }
+    toast("🗑 カテゴリを削除しました");
+    return;
+  }
+
+  // シートがある場合は「移動」か「まとめて削除」を選択
+  openModal(`カテゴリ「${cat}」を削除`,
+    `<p style="font-size:14px;line-height:1.7;margin-bottom:10px">
+       このカテゴリには <strong>${list.length}</strong> 枚のシートがあります。処理方法を選んでください。</p>
+     <label class="cs-radio"><input type="radio" name="delmode" value="move" checked>
+       <span>シートを「未分類」へ移動してカテゴリだけ削除</span></label>
+     <label class="cs-radio"><input type="radio" name="delmode" value="purge">
+       <span>シートごと完全に削除する</span></label>`,
+    null, { okText: "実行", onOk: () => {
+      const mode = (document.querySelector('input[name="delmode"]:checked') || {}).value || "move";
+      if (mode === "purge") {
+        if (!confirm(`本当に「${cat}」内の ${list.length} シートを完全削除しますか？元に戻せません。`)) return;
+        data.tabs = data.tabs.filter(t => (t.category || "未分類") !== cat);
+      } else {
+        registerCategory(FALLBACK, { icon: "📥", desc: "あとで振り分け" });
+        data.tabs.forEach(t => { if ((t.category || "未分類") === cat) t.category = FALLBACK; });
+      }
+      delete data.catMeta[cat];
+      data.catOrder = data.catOrder.filter(c => c !== cat);
+      closeModal();
+      if (activeCat === cat) goHome(); else { render(); renderNav(); }
+      toast("🗑 カテゴリを削除しました");
+    }});
+}
+
+/* シート名（先頭絵文字を含むラベル）の編集 */
+function editSheetLabel(id) {
+  const tab = data.tabs.find(t => t.id === id);
+  if (!tab) return;
+  openModal("シート名を編集",
+    `<label>シート名（先頭に絵文字も使えます）</label>
+     <input id="mLabel" value="${escAttr(tab.label || "")}" placeholder="例: 🔥 攻撃手法">`,
+    () => { tab.label = val("mLabel") || tab.label; render(); renderNav(); toast("✅ シート名を更新しました"); });
 }
 
 /* ═══════════════════════════════════════════════════
@@ -1695,6 +1892,41 @@ function yyyymmdd() { return new Date().toISOString().slice(0,10); }
     }
     src = null; grp = null; grpName = null;
   });
+
+  /* ── タッチ端末向け（HTML5 DnD 非対応環境）: ハンドル起点のポインタ式ドラッグ ── */
+  let tSrc = null, tGrp = null, tGrpName = null;
+  const finishTouch = commit => {
+    if (tSrc) tSrc.classList.remove("dnd-dragging");
+    if (commit && tGrp && tGrpName && reg[tGrpName]) {
+      const ids = directItems(tGrp).map(el => el.getAttribute("data-dnd-id"));
+      try { reg[tGrpName](ids); } catch (err) { console.error("[dnd]", err); }
+    }
+    tSrc = null; tGrp = null; tGrpName = null;
+  };
+  document.addEventListener("touchstart", e => {
+    const h = e.target.closest && e.target.closest(".dnd-handle");
+    if (!h) return;
+    const item = h.closest("[data-dnd-id]");
+    if (!item) return;
+    tSrc = item;
+    tGrp = item.closest("[data-dnd-group]");
+    tGrpName = tGrp ? tGrp.getAttribute("data-dnd-group") : null;
+    item.classList.add("dnd-dragging");
+  }, { passive: true });
+  document.addEventListener("touchmove", e => {
+    if (!tSrc || !tGrp) return;
+    const t = e.touches[0]; if (!t) return;
+    e.preventDefault();                          // ドラッグ中のみスクロール抑止
+    const el = document.elementFromPoint(t.clientX, t.clientY);
+    const over = el && el.closest && el.closest("[data-dnd-id]");
+    if (!over || over === tSrc) return;
+    if (over.closest("[data-dnd-group]") !== tGrp) return;
+    const r = over.getBoundingClientRect();
+    const after = (t.clientY - r.top) / r.height > 0.5;
+    tGrp.insertBefore(tSrc, after ? over.nextElementSibling : over);
+  }, { passive: false });
+  document.addEventListener("touchend", () => finishTouch(true));
+  document.addEventListener("touchcancel", () => finishTouch(false));
 })();
 
 /* 配列 arr を、表示中の並び(orderedIds)に合わせて“その場”で並び替える。
@@ -1710,6 +1942,18 @@ function reorderVisible(arr, orderedIds) {
       if (nx) arr[i] = nx;
     }
   }
+}
+
+/* 配列を、DnDで得た「元インデックスの並び」に従って並び替える（id を持たない行配列用）。
+   フィルタなしの全要素が対象である前提（インデックス欠けがあれば安全のため中断）。 */
+function reorderByIndex(arr, orderedIdxStrings) {
+  if (!Array.isArray(arr)) return;
+  const idx = orderedIdxStrings.map(Number);
+  if (idx.length !== arr.length) return;
+  if (idx.some(n => !Number.isInteger(n) || n < 0 || n >= arr.length)) return;
+  if (new Set(idx).size !== arr.length) return;
+  const copy = idx.map(i => arr[i]);
+  for (let i = 0; i < arr.length; i++) arr[i] = copy[i];
 }
 
 /* 並び替えハンドルのHTMLを返す共通ヘルパ */
