@@ -20,6 +20,8 @@ let editMode   = false;
 let modalCb    = null;
 let activeTag  = null;          // tag filter within a sheet
 let searchMode = false;
+let searchScope = "mode";      // "mode"（このタブ内）| "all"（全体）
+let gsLastQ    = "";           // 全体検索の直近クエリ（ジャンプ時に再利用）
 
 /* attacklog state (旧 logbook + web を一本化) */
 let alCert       = "OSCP";      // OSCP | OSWA（資格タブ）
@@ -1034,23 +1036,8 @@ function bindEditableHandlers() {
 ════════════════════════════════════════════════════ */
 function bindGlobalUI() {
   const si = document.getElementById("searchInput");
-  si.addEventListener("input", function () {
-    const q = this.value.trim();
-    document.getElementById("searchClear").classList.toggle("show", q.length>0);
-    if (!q) { searchMode = false; alDrawerQuery = ""; hgDrawerQuery = ""; render(); return; }
-    searchMode = true;
-    if (appMode === "attacklog") { renderAttackLogSearch(); return; }
-    if (appMode === "hunt")    { renderHuntSearch(); return; }
-    if (appMode === "query")   { renderQuerySearch(); return; }
-    if (appMode === "coverage"){ searchMode = false; return; }
-    if (appMode === "payload") { renderPayloadSearch(); return; }
-    if (appMode === "tools")   { renderToolsSearch(); return; }
-    if (appMode === "knowledge") { renderKnowledgeSearch(); return; }
-    if (appMode === "dashboards") { renderDashboardsSearch(); return; }
-    if (appMode === "methodology") { renderMethodologySearch(); return; }
-    if (appMode === "commands") { renderCommandsSearch(); return; }
-    renderNav(); renderSearch();
-  });
+  si.addEventListener("input", function () { runSearch(); });
+  updateScopeBtn();
   document.getElementById("searchClear").onclick = () => { clearSearchInput(); searchMode=false; alDrawerQuery=""; hgDrawerQuery=""; render(); si.focus(); };
 
   document.getElementById("brandHome").onclick = () => {
@@ -1086,6 +1073,51 @@ function bindGlobalUI() {
   window.addEventListener("scroll", () => {
     document.getElementById("appHeader").classList.toggle("scrolled", window.scrollY>4);
   });
+}
+
+/* 検索実行の入口。searchScope（このタブ内 / 全体）で振り分ける。 */
+function runSearch() {
+  const si = document.getElementById("searchInput");
+  if (!si) return;
+  const q  = si.value.trim();
+  const sc = document.getElementById("searchClear");
+  if (sc) sc.classList.toggle("show", q.length > 0);
+  if (!q) { searchMode = false; alDrawerQuery = ""; hgDrawerQuery = ""; render(); return; }
+
+  if (searchScope === "all") { searchMode = true; renderGlobalSearch(q); return; }
+
+  // ── このタブ内（従来どおり appMode ごとに振り分け）──
+  searchMode = true;
+  if (appMode === "attacklog")  { renderAttackLogSearch(); return; }
+  if (appMode === "hunt")       { renderHuntSearch(); return; }
+  if (appMode === "query")      { renderQuerySearch(); return; }
+  if (appMode === "coverage")   { searchMode = false; return; }
+  if (appMode === "payload")    { renderPayloadSearch(); return; }
+  if (appMode === "tools")      { renderToolsSearch(); return; }
+  if (appMode === "knowledge")  { renderKnowledgeSearch(); return; }
+  if (appMode === "dashboards") { renderDashboardsSearch(); return; }
+  if (appMode === "methodology"){ renderMethodologySearch(); return; }
+  if (appMode === "commands")   { renderCommandsSearch(); return; }
+  renderNav(); renderSearch();
+}
+
+/* スコープ切替（ヘッダのボタン） */
+function toggleSearchScope() {
+  searchScope = (searchScope === "all") ? "mode" : "all";
+  updateScopeBtn();
+  const si = document.getElementById("searchInput");
+  if (si && si.value.trim()) runSearch();   // 入力中なら即座に切替結果へ
+}
+function updateScopeBtn() {
+  const btn = document.getElementById("searchScopeBtn");
+  if (!btn) return;
+  const lab = document.getElementById("searchScopeLabel");
+  const ic  = document.getElementById("searchScopeIcon");
+  const all = searchScope === "all";
+  btn.classList.toggle("all", all);
+  if (lab) lab.textContent = all ? "全体" : "タブ内";
+  if (ic)  ic.textContent  = all ? "travel_explore" : "tab";
+  btn.title = all ? "検索範囲: 全体（クリックでこのタブ内に）" : "検索範囲: このタブ内（クリックで全体に）";
 }
 
 function renderSearch() {
@@ -1151,6 +1183,187 @@ function clearSearchInput() {
   if (si) si.value = "";
   const sc = document.getElementById("searchClear");
   if (sc) sc.classList.remove("show");
+}
+
+/* ═══════════════════════════════════════════════════
+   GLOBAL SEARCH  (全タブ横断検索)
+   各モードのデータを横断し、モード別にまとめて結果表示。
+   個々のヒットは対応モードへジャンプして開く。
+════════════════════════════════════════════════════ */
+function gsText(o){ try { return JSON.stringify(o).toLowerCase(); } catch(_) { return ""; } }
+function gsSnippet(text, q){
+  const t = String(text||"").replace(/\s+/g," ").trim();
+  if (!t) return "";
+  const i = t.toLowerCase().indexOf(q);
+  if (i < 0) return t.length > 90 ? t.slice(0,90)+"…" : t;
+  const s = Math.max(0, i - 28);
+  return (s>0?"…":"") + t.slice(s, i + q.length + 62) + (i + q.length + 62 < t.length ? "…" : "");
+}
+function gsPushGroup(groups, icon, label, mode, hits){
+  if (!hits.length) return 0;
+  const CAP = 40;
+  const shown = hits.slice(0, CAP);
+  const rows = shown.map(h => `
+    <button class="gs-hit" onclick="${h.open}">
+      <span class="gs-hit-main">
+        <span class="gs-hit-title">${esc(h.title)}</span>
+        ${h.sub ? `<span class="gs-hit-sub">${esc(h.sub)}</span>` : ""}
+      </span>
+      <span class="material-symbols-rounded gs-hit-go">open_in_new</span>
+    </button>`).join("");
+  const more = hits.length > CAP
+    ? `<div class="gs-more">ほか ${hits.length - CAP} 件（見出しをクリックして「${esc(label)}」タブで絞り込み）</div>` : "";
+  groups.push(`
+    <div class="gs-group">
+      <div class="gs-group-head" onclick="gsJumpMode('${mode}')" title="このタブの検索で開く">
+        <span class="material-symbols-rounded gs-group-icon">${icon}</span>
+        <span class="gs-group-label">${esc(label)}</span>
+        <span class="gs-group-count">${hits.length}</span>
+        <span class="material-symbols-rounded gs-group-jump">chevron_right</span>
+      </div>
+      <div class="gs-hits">${rows}${more}</div>
+    </div>`);
+  return hits.length;
+}
+
+function renderGlobalSearch(q){
+  gsLastQ = q;
+  const ql   = q.toLowerCase();
+  const main = document.getElementById("main");
+
+  // 未訪問モードの初期データも検索対象に含めるため、シードを実行しておく
+  ["toolsSeedIfEmpty","knowledgeSeedIfEmpty","commandsSeedIfEmpty","methodologySeedIfEmpty","webSeedIfEmpty"]
+    .forEach(fn => { try { if (typeof window[fn] === "function") window[fn](); } catch(_){} });
+
+  const groups = [];
+  let total = 0;
+
+  // 1) チートシート（ブロック単位）
+  {
+    const hits = [];
+    data.tabs.forEach(tab => (tab.blocks||[]).forEach(blk => {
+      const rows = blk.rows || [];
+      const mr = rows.filter(row => row.some(c => (c||"").toLowerCase().includes(ql)));
+      const labelHit = (blk.label||"").toLowerCase().includes(ql) || (tab.label||"").toLowerCase().includes(ql);
+      if (!mr.length && !labelHit) return;
+      const cell = mr.length ? (mr[0].find(c => (c||"").toLowerCase().includes(ql)) || mr[0][0] || "") : "";
+      hits.push({ title: `${stripEmoji(tab.label)} › ${blk.label||"表"}`, sub: gsSnippet(cell, ql), open: `gsOpen('cheatsheet','${tab.id}')` });
+    }));
+    total += gsPushGroup(groups, "grid_view", "チートシート", "cheatsheet", hits);
+  }
+  // 2) ツール
+  {
+    const hits = (data.tools||[]).filter(t => gsText(t).includes(ql))
+      .map(t => ({ title: t.name||"ツール", sub: gsSnippet(t.summary||t.tips||"", ql), open: `gsOpen('tools','${t.id}')` }));
+    total += gsPushGroup(groups, "build", "ツール", "tools", hits);
+  }
+  // 3) ナレッジ
+  {
+    const hits = (data.knowledge||[]).filter(k => gsText(k).includes(ql))
+      .map(k => ({ title: k.title||"ナレッジ", sub: gsSnippet(k.desc||k.url||"", ql), open: `gsOpen('knowledge','${k.id}')` }));
+    total += gsPushGroup(groups, "menu_book", "ナレッジ", "knowledge", hits);
+  }
+  // 4) メソドロジー（節単位）
+  {
+    const hits = [];
+    (data.methodologies||[]).forEach(m => (m.sections||[]).forEach(s => {
+      if (!(gsText(s).includes(ql) || (m.cert||"").toLowerCase().includes(ql))) return;
+      const hitStep = (s.steps||[]).find(st => (st.label+" "+st.command+" "+st.hint+" "+st.next).toLowerCase().includes(ql));
+      hits.push({
+        title: `${m.cert} › ${s.label}`,
+        sub: gsSnippet(hitStep ? (hitStep.label + " — " + hitStep.command) : s.trigger, ql),
+        open: `gsOpen('meth','${s.id}','${escAttr(m.cert)}')`
+      });
+    }));
+    total += gsPushGroup(groups, "account_tree", "メソドロジー", "methodology", hits);
+  }
+  // 5) コマンド
+  {
+    const hits = (data.commands||[]).filter(c => gsText(c).includes(ql))
+      .map(c => ({ title: c.title||"コマンド", sub: gsSnippet(c.desc || (c.variants && c.variants[0] && c.variants[0].cmd) || "", ql), open: `gsJumpMode('commands')` }));
+    total += gsPushGroup(groups, "terminal", "コマンド", "commands", hits);
+  }
+  // 6) 攻略ログ
+  {
+    const hits = (data.attackLogs||[]).filter(l => gsText(l).includes(ql))
+      .map(l => ({ title: l.name||"攻略ログ", sub: gsSnippet(l.cert||"", ql), open: `gsOpen('attacklog','${l.id}')` }));
+    total += gsPushGroup(groups, "track_changes", "攻略ログ", "attacklog", hits);
+  }
+  // 7) ペイロード
+  {
+    const hits = (data.payloads||[]).filter(p => gsText(p).includes(ql))
+      .map(p => ({ title: p.title||"ペイロード", sub: gsSnippet(p.body||p.context||"", ql), open: `gsOpen('payload','${p.id}')` }));
+    total += gsPushGroup(groups, "vaccines", "ペイロード", "payload", hits);
+  }
+  // 8) ハント
+  {
+    const hits = (data.huntLogs||[]).filter(l => gsText(l).includes(ql))
+      .map(l => ({ title: l.name||"ハント", sub: gsSnippet(l.cert||"", ql), open: `gsOpen('hunt','${l.id}')` }));
+    total += gsPushGroup(groups, "travel_explore", "ハント", "hunt", hits);
+  }
+  // 9) クエリ集
+  {
+    const hits = (data.queries||[]).filter(x => gsText(x).includes(ql))
+      .map(x => ({ title: x.title||"クエリ", sub: gsSnippet((x.lang?`[${x.lang}] `:"") + (x.body||""), ql), open: `gsOpen('query','${x.id}')` }));
+    total += gsPushGroup(groups, "manage_search", "クエリ集", "query", hits);
+  }
+  // 10) ダッシュボード
+  {
+    const hits = (data.dashboards||[]).filter(db => gsText(db).includes(ql))
+      .map(db => ({ title: db.name||"ダッシュボード", sub: gsSnippet(db.description||db.platform||"", ql), open: `gsJumpMode('dashboards')` }));
+    total += gsPushGroup(groups, "dashboard", "ダッシュボード", "dashboards", hits);
+  }
+
+  main.innerHTML = `
+    <div class="page-head">
+      <div class="page-title"><span class="material-symbols-rounded" style="font-size:26px">travel_explore</span>全体検索</div>
+    </div>
+    <div class="search-scope-bar">
+      <span class="material-symbols-rounded">travel_explore</span>
+      <span>「<span class="search-stat">${esc(q)}</span>」を<b>全タブ</b>から検索</span>
+      <span style="margin-left:auto">${total} 件 / ${groups.length} タブ</span>
+    </div>
+    ${total ? groups.join("") : emptyState("search_off","一致する結果がありません","別のキーワードをお試しください")}
+  `;
+}
+
+/* 全体検索の個別ヒットを、対応モードで開く */
+function gsOpen(mode, id, extra){
+  if (mode === "cheatsheet") { if (appMode!=="cheatsheet") setMode("cheatsheet"); gotoTab(id); return; }
+  if (mode === "tools")      { if (appMode!=="tools")      setMode("tools");      if (typeof tOpen==="function")      tOpen(id); return; }
+  if (mode === "knowledge")  { if (appMode!=="knowledge")  setMode("knowledge");  if (typeof kOpenDetail==="function") kOpenDetail(id); return; }
+  if (mode === "meth")       { gsOpenMeth(id, extra); return; }
+  if (mode === "attacklog")  { if (appMode!=="attacklog")  setMode("attacklog");  if (typeof alOpen==="function")     alOpen(id); return; }
+  if (mode === "hunt")       { if (appMode!=="hunt")       setMode("hunt");       if (typeof hgOpen==="function")     hgOpen(id); return; }
+  if (mode === "payload")    { if (appMode!=="payload")    setMode("payload");    if (typeof pOpen==="function")      pOpen(id); return; }
+  if (mode === "query")      { if (appMode!=="query")      setMode("query");      if (typeof hqOpenQuery==="function") hqOpenQuery(id); return; }
+}
+
+/* メソドロジーの該当節を開いてスクロール＆ハイライト */
+function gsOpenMeth(sid, cert){
+  if (appMode !== "methodology") setMode("methodology");
+  if (cert) methCert = cert;
+  methOpenSections[sid] = true;
+  searchMode = false; clearSearchInput(); updateScopeBtn();
+  renderMethodology();
+  setTimeout(() => {
+    const el = document.querySelector('[data-dnd-id="' + sid + '"]');
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("gs-flash");
+      setTimeout(() => el.classList.remove("gs-flash"), 1600);
+    }
+  }, 80);
+}
+
+/* 全体検索の結果見出しから、そのモードの「このタブ内検索」へ着地する */
+function gsJumpMode(mode){
+  const q = gsLastQ;
+  searchScope = "mode"; updateScopeBtn();
+  if (appMode !== mode) setMode(mode);   // setMode は検索入力をクリアする
+  const si = document.getElementById("searchInput");
+  if (si) si.value = q;
+  runSearch();
 }
 
 /* ═══════════════════════════════════════════════════

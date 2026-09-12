@@ -66,6 +66,7 @@ function renderMethodology() {
             <span class="meth-section-label">${esc(s.label)}</span>
             ${s.trigger?`<span class="meth-section-trigger">${esc(s.trigger)}</span>`:""}
             <span class="meth-section-prog ${done===s.steps.length&&done>0?'complete':''}">${done}/${s.steps.length}</span>
+            <span class="meth-section-move" onclick="event.stopPropagation();mMoveSectionToCert('${s.id}')" title="別の資格タブへ移動"><span class="material-symbols-rounded" style="font-size:15px">drive_file_move</span></span>
             <span class="meth-section-edit" onclick="event.stopPropagation();mEditSection('${s.id}')" title="節を編集"><span class="material-symbols-rounded" style="font-size:15px">edit</span></span>
           </button>
           ${open?`<div class="meth-section-body">
@@ -279,7 +280,55 @@ function mEditSection(sid) {
     `<label>ラベル</label><input id="msLabel" value="${esc(f.s.label)}">
      <label>トリガー</label><input id="msTrigger" value="${esc(f.s.trigger)}">`,
     () => { f.s.label=val("msLabel")||"新しい節"; f.s.trigger=val("msTrigger"); renderMethodology(); toast("✅ 更新しました"); },
-    { extraBtns: [{ label:"節を削除", cls:"btn-text btn-danger", fn:()=>{ closeModal(); mDelSection(sid); } }] });
+    { extraBtns: [
+        { label:"別タブへ移動", cls:"btn-text", fn:()=>{ closeModal(); mMoveSectionToCert(sid); } },
+        { label:"節を削除",     cls:"btn-text btn-danger", fn:()=>{ closeModal(); mDelSection(sid); } },
+    ] });
+}
+
+/* 節を別の資格タブ（cert）へ移動する。
+   手法・チェック状態(step.id基準)はそのまま保持される。
+   これにより「OSCP試験用」「OSCP学習用」などにタブを分けて、
+   節を作り直すことなく振り分けられる。 */
+function mMoveSectionToCert(sid) {
+  const f = mFindSection(sid); if (!f) return;
+  const curCert = f.m.cert;
+  const others  = [...new Set(data.methodologies.map(m=>m.cert))].filter(c => c !== curCert);
+  const opts = others.map(c=>`<option value="${escAttr(c)}">${esc(c)}</option>`).join("");
+  openModal("節を別タブへ移動",
+    `<div class="meth-import-hint">「<b>${esc(f.s.label)}</b>」を現在の「${esc(curCert)}」タブから別の資格タブへ移します。手法・チェック状態はそのまま引き継がれます。</div>
+     ${others.length
+        ? `<label>移動先の既存タブ</label>
+           <select id="mMoveDest">${opts}</select>`
+        : `<div class="meth-import-hint">他の資格タブがまだありません。下の欄に新しいタブ名を入力してください。</div>`}
+     <label style="margin-top:12px">または新しいタブを作成して移動</label>
+     <input id="mMoveNew" placeholder="例: OSCP-試験 / OSCP-学習 / OSWA-学習">
+     <div class="meth-import-hint">新しいタブ名を入力するとそちらが優先されます。</div>`,
+    () => {
+      const nw   = val("mMoveNew").trim();
+      const dest = nw || val("mMoveDest");
+      if (!dest)          { toast("移動先を選択または入力してください"); return; }
+      if (dest === curCert){ toast("同じタブが選ばれています"); return; }
+      mDoMoveSection(sid, dest);
+    },
+    { okText: "移動" });
+}
+
+function mDoMoveSection(sid, destCert) {
+  const f = mFindSection(sid); if (!f) return;
+  const sec = f.s;
+  // 移動元から取り除く
+  f.m.sections = f.m.sections.filter(x => x.id !== sid);
+  // 移動先の methodology を取得（無ければ作成）
+  let dm = data.methodologies.find(m => m.cert === destCert);
+  if (!dm) {
+    dm = { id: uid(), title: `${destCert} Methodology`, cert: destCert, sections: [], ts: Date.now() };
+    data.methodologies.push(dm);
+  }
+  dm.sections.push(sec);
+  methOpenSections[sid] = true;    // 移動先で開いた状態に
+  renderMethodology();
+  toast(`✅ 「${sec.label}」を「${destCert}」タブへ移動しました`);
 }
 function mDelSection(sid) {
   const f = mFindSection(sid); if (!f) return;

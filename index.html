@@ -190,6 +190,34 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 .search-clear:hover { background: var(--md-surface-2); }
 .search-clear.show { display: grid; }
+.search-scope-btn {
+  display: flex; align-items: center; gap: 4px; flex: 0 0 auto;
+  height: 30px; padding: 0 10px; border-radius: var(--radius-full);
+  border: 1px solid var(--md-outline-var); background: var(--md-surface-1);
+  color: var(--md-on-surface-var); font-size: 12px; font-weight: 700;
+  font-family: var(--font-sans); cursor: pointer; white-space: nowrap;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.search-scope-btn:hover { background: var(--md-surface-2); color: var(--md-on-surface); }
+.search-scope-btn.all { color: var(--md-primary); border-color: var(--md-primary); background: color-mix(in srgb, var(--md-primary) 10%, transparent); }
+@media (max-width: 560px){ .search-scope-btn #searchScopeLabel { display:none; } .search-scope-btn { padding: 0 8px; } }
+
+/* ── 全体検索（グループ表示） ── */
+.gs-group { background: var(--md-surface); border: 1px solid var(--md-outline-var); border-radius: var(--radius-lg); margin-bottom: var(--sp-4); overflow: hidden; }
+.gs-group-head { display: flex; align-items: center; gap: var(--sp-2); width: 100%; padding: var(--sp-3) var(--sp-4); background: var(--md-surface-1); cursor: pointer; border: none; text-align: left; }
+.gs-group-head:hover { background: var(--md-surface-2); }
+.gs-group-icon { color: var(--md-primary); font-size: 20px; }
+.gs-group-label { font-weight: 800; letter-spacing: -.2px; }
+.gs-group-count { font-size: 12px; font-weight: 700; color: var(--md-on-surface-var); background: var(--md-surface-2); border-radius: var(--radius-full); padding: 1px 9px; }
+.gs-group-jump { margin-left: auto; color: var(--md-on-surface-var); }
+.gs-hits { display: flex; flex-direction: column; }
+.gs-hit { display: flex; align-items: center; gap: var(--sp-3); width: 100%; padding: 11px var(--sp-4); background: none; border: none; border-top: 1px solid var(--md-outline-var); text-align: left; cursor: pointer; color: inherit; }
+.gs-hit:hover { background: var(--md-surface-1); }
+.gs-hit-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.gs-hit-title { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gs-hit-sub { font-size: 12px; color: var(--md-on-surface-var); font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gs-hit-go { color: var(--md-on-surface-var); font-size: 18px; flex: 0 0 auto; }
+.gs-more { padding: 9px var(--sp-4); font-size: 12px; color: var(--md-on-surface-var); border-top: 1px solid var(--md-outline-var); }
 .kbd-hint {
   display: flex; align-items: center; gap: 3px;
   font-size: 11px; color: var(--md-on-surface-var);
@@ -1321,6 +1349,9 @@ body.edit #editBanner { display: flex; }
 .meth-section-prog.complete { color: var(--md-success); background: var(--md-success-container, rgba(63,208,127,.15)); }
 .meth-section-edit { display: grid; place-items: center; width: 28px; height: 28px; color: var(--md-on-surface-var); border-radius: 6px; flex-shrink: 0; }
 .meth-section-edit:hover { background: var(--md-surface-2); color: var(--md-primary); }
+/* 全体検索でジャンプした節を一瞬ハイライト */
+@keyframes gsFlash { 0%{ background: var(--md-primary); } 100%{ background: transparent; } }
+.gs-flash { animation: gsFlash 1.6s ease-out; border-radius: 12px; }
 .meth-section-move { display: grid; place-items: center; width: 26px; height: 26px; color: var(--md-on-surface-var); border-radius: 6px; flex-shrink: 0; }
 .meth-section-move:hover { background: var(--md-surface-2); color: var(--md-primary); }
 .meth-step-act:disabled, .th-step-edit:disabled, .lb-step-edit:disabled { opacity: .3; cursor: not-allowed; pointer-events: none; }
@@ -1568,6 +1599,10 @@ body.edit #editBanner { display: flex; }
         <span class="material-symbols-rounded lead-icon">search</span>
         <input id="searchInput" type="text" placeholder="コマンド・フィールド・コードを検索…" autocomplete="off" spellcheck="false" aria-label="検索">
         <button class="search-clear" id="searchClear" title="クリア" aria-label="クリア"><span class="material-symbols-rounded">close</span></button>
+        <button class="search-scope-btn" id="searchScopeBtn" title="検索範囲を切替（このタブ内 / 全体）" aria-label="検索範囲を切替" onclick="toggleSearchScope()">
+          <span class="material-symbols-rounded" style="font-size:16px" id="searchScopeIcon">tab</span>
+          <span id="searchScopeLabel">タブ内</span>
+        </button>
         <span class="kbd-hint" id="kbdHint"><span class="material-symbols-rounded" style="font-size:13px">keyboard_command_key</span>K</span>
       </div>
     </div>
