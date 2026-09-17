@@ -1,14 +1,21 @@
 /* ═══════════════════════════════════════════════════════
    go2 cheatsheet — dashboards.js  (ダッシュボード保管)
    Data: data.dashboards[]
-   dashboard { id,name,platform,format,description,certs[],content,size,meta,ts }
-     platform: "kibana" | "splunk"
-   Kibana/Splunk のダッシュボード定義ファイルを丸ごと保管し、
-   必要な時に元の形式でダウンロードして使う。
+   kind:"file"  … dashboard { id,name,platform,format,description,certs[],content,size,meta,kind,ts }
+                   platform: "kibana" | "splunk"
+                   Kibana/Splunk のダッシュボード定義ファイルを丸ごと保管し、
+                   必要な時に元の形式でダウンロードして使う。
+   kind:"columnset" … Kibana 列セット
+                   { id,name,platform:"kibana",kind:"columnset",baseQuery,columns[],
+                     description,certs[],content,size,meta,format:"cols",ts }
+                   調査種別ごとに「ベースクエリ＋追加する列の並び」を保管し、
+                   Discover/Security にコピペ設定する用途。
 
-   app.js の共通関数（openModal/toast/esc/uid/val）と
+   app.js の共通関数（openModal/toast/esc/escAttr/uid/val/copyToClipboard/emptyState）と
    定数（DASH_PLATFORMS）を再利用。
 ════════════════════════════════════════════════════════ */
+
+let dashKindFilter = "all";     // all | file | columnset
 
 function dashPlatMeta(p){ return DASH_PLATFORMS[p] || DASH_PLATFORMS.kibana; }
 function dashFmtSize(bytes){
@@ -21,7 +28,6 @@ function dashFmtSize(bytes){
 function dashAnalyze(content, platform) {
   const meta = {};
   if (platform === "kibana") {
-    // ndjson: 各行のtypeを集計
     const counts = {};
     content.split("\n").forEach(line => {
       line = line.trim(); if (!line) return;
@@ -32,7 +38,6 @@ function dashAnalyze(content, platform) {
     if (counts.visualization) meta.visualizations = counts.visualization;
     if (counts["index-pattern"]) meta.indexPatterns = counts["index-pattern"];
   } else if (platform === "splunk") {
-    // Splunk XML: <dashboard> / <panel> / <search> の数をざっくり
     const dash = (content.match(/<dashboard/gi)||[]).length + (content.match(/<form/gi)||[]).length;
     const panels = (content.match(/<panel/gi)||[]).length;
     const searches = (content.match(/<search/gi)||[]).length;
@@ -41,6 +46,15 @@ function dashAnalyze(content, platform) {
     if (searches) meta.searches = searches;
   }
   return Object.keys(meta).length ? meta : null;
+}
+
+/* 列セットの「列文字列」→配列（改行/カンマ区切りの両対応） */
+function dashParseCols(str) {
+  return String(str||"").split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
+}
+function colSetContent(name, baseQuery, columns, note) {
+  return `調査種別: ${name}\nベースクエリ(KQL): ${baseQuery}\n`
+       + `列セット: ${columns.join(", ")}\n見どころ: ${note||""}`;
 }
 
 function renderDashNav() {
@@ -61,36 +75,49 @@ function renderDashboards() {
   renderDashNav();
   const main = document.getElementById("main");
 
-  let list = data.dashboards.slice();
+  const all = data.dashboards.slice();
+  const nFile = all.filter(db => (db.kind||"file")==="file").length;
+  const nCol  = all.filter(db => db.kind==="columnset").length;
+
+  // 種別フィルタ → プラットフォームフィルタ
+  let list = all;
+  if (dashKindFilter !== "all") list = list.filter(db => (db.kind||"file") === dashKindFilter);
   if (dashPlatFilter !== "all") list = list.filter(db => db.platform === dashPlatFilter);
 
-  const plats = [...new Set(data.dashboards.map(db=>db.platform))];
+  const kindChip = (id,label,n) =>
+    `<button class="th-chip ${dashKindFilter===id?'on':''}" onclick="dSetKind('${id}')">${esc(label)} <span style="opacity:.6">${n}</span></button>`;
+  const kindChips = kindChip("all","すべて",all.length) + kindChip("file","定義ファイル",nFile) + kindChip("columnset","列セット",nCol);
+
+  const plats = [...new Set(all.map(db=>db.platform))];
   const platChip = (id, label) => {
-    const n = id==="all" ? data.dashboards.length : data.dashboards.filter(db=>db.platform===id).length;
+    const n = id==="all" ? all.length : all.filter(db=>db.platform===id).length;
     return `<button class="th-chip ${dashPlatFilter===id?'on':''}" onclick="dSetPlat('${id}')">${esc(label)} <span style="opacity:.6">${n}</span></button>`;
   };
-  const chips = platChip("all","すべて") + plats.map(p=>platChip(p, dashPlatMeta(p).label)).join("");
+  const platChips = platChip("all","すべて") + plats.map(p=>platChip(p, dashPlatMeta(p).label)).join("");
 
   const cards = list.map(renderDashCard).join("");
 
   main.innerHTML = `
     <div class="s-head">
       <h1>ダッシュボード</h1>
-      <span class="th-count">${data.dashboards.length} 件</span>
+      <span class="th-count">${all.length} 件（定義 ${nFile} · 列セット ${nCol}）</span>
+      <button class="th-add" onclick="dAddColumnSet()"><span class="material-symbols-rounded">view_column</span>列セットを追加</button>
       <button class="th-add" onclick="dAddDashboard()"><span class="material-symbols-rounded">upload_file</span>ダッシュボードを追加</button>
     </div>
-    <div class="th-filters">${chips}</div>
+    <div class="th-filters">${kindChips}<span class="th-sep"></span>${platChips}</div>
     ${list.length ? `<div class="dash-grid">${cards}</div>`
-      : emptyState("dashboard", data.dashboards.length?"該当するダッシュボードがありません":"ダッシュボードがまだありません",
-          data.dashboards.length?"フィルタを変えてください":"「ダッシュボードを追加」でKibana/Splunkの定義ファイルを保管できます")}
+      : emptyState("dashboard", all.length?"該当する項目がありません":"ダッシュボードがまだありません",
+          all.length?"フィルタを変えてください":"「列セットを追加」でKibana調査種別の列セット、または「ダッシュボードを追加」で定義ファイルを保管できます")}
   `;
 }
 
 function renderDashCard(db) {
+  if (db.kind === "columnset") return renderColSetCard(db);
+
   const pm = dashPlatMeta(db.platform);
   const certs = (db.certs||[]).map(c=>`<span class="tool-cert-mini">${esc(c)}</span>`).join("");
   const metaChips = db.meta ? Object.keys(db.meta).map(k=>{
-    const labels={dashboards:"ダッシュボード",searches:"検索",visualizations:"可視化",indexPatterns:"index-pattern",panels:"パネル"};
+    const labels={dashboards:"ダッシュボード",searches:"検索",visualizations:"可視化",indexPatterns:"index-pattern",panels:"パネル",columns:"列"};
     return `<span class="dash-meta-chip">${labels[k]||k}: ${db.meta[k]}</span>`;
   }).join("") : "";
   return `
@@ -114,7 +141,99 @@ function renderDashCard(db) {
     </div>`;
 }
 
+function renderColSetCard(db) {
+  const certs = (db.certs||[]).map(c=>`<span class="tool-cert-mini">${esc(c)}</span>`).join("");
+  const cols = (db.columns||[]).map((c,i)=>`<span class="colset-col"><b>${i+1}</b>${esc(c)}</span>`).join("");
+  return `
+    <div class="dash-card colset">
+      <div class="dash-card-top">
+        <span class="colset-badge">Kibana 列セット</span>
+        <span class="dash-size">${(db.columns||[]).length} 列</span>
+      </div>
+      <h3 class="dash-name">${esc(db.name)}</h3>
+      ${db.description?`<div class="dash-desc">${esc(db.description)}</div>`:""}
+      ${db.baseQuery?`<div class="colset-q" title="ベースクエリ(KQL)">${esc(db.baseQuery)}</div>`:""}
+      ${cols?`<div class="colset-cols">${cols}</div>`:""}
+      <div class="dash-card-foot">
+        ${certs}
+        <span class="dash-actions">
+          <button class="dash-preview-btn" onclick="dCopyColumns('${db.id}')"><span class="material-symbols-rounded" style="font-size:14px">content_copy</span>列コピー</button>
+          <button class="dash-preview-btn" onclick="dCopyQuery('${db.id}')"><span class="material-symbols-rounded" style="font-size:14px">terminal</span>クエリ</button>
+          <button class="dash-edit-btn" onclick="dEdit('${db.id}')"><span class="material-symbols-rounded" style="font-size:14px">edit</span></button>
+        </span>
+      </div>
+    </div>`;
+}
+
 function dSetPlat(p){ dashPlatFilter=p; renderDashboards(); }
+function dSetKind(k){ dashKindFilter=k; renderDashboards(); }
+
+/* 列セットのコピー */
+function dCopyColumns(id){
+  const db = data.dashboards.find(x=>x.id===id); if(!db) return;
+  copyToClipboard((db.columns||[]).join(", "));
+  toast("📋 列セットをコピーしました");
+}
+function dCopyQuery(id){
+  const db = data.dashboards.find(x=>x.id===id); if(!db) return;
+  copyToClipboard(db.baseQuery||"");
+  toast("📋 ベースクエリをコピーしました");
+}
+
+/* ═══════════════════════════════════════════════════
+   列セット 追加・編集
+════════════════════════════════════════════════════ */
+function dColSetForm(db) {
+  return `<label>調査種別 / 名前</label>
+     <input id="cName" value="${esc(db?.name||"")}" placeholder="例: プロセス実行（Sysmon 1）">
+     <label>ベースクエリ（KQL・任意）</label>
+     <textarea id="cQuery" placeholder='event.code : "1" and event.dataset : "windows.sysmon_operational"' style="min-height:56px;font-family:var(--font-mono);font-size:11px">${esc(db?.baseQuery||"")}</textarea>
+     <label>列（1行1フィールド、またはカンマ区切り。この順で追加）</label>
+     <textarea id="cCols" placeholder="@timestamp&#10;host.name&#10;process.parent.name&#10;process.name&#10;process.command_line" style="min-height:120px;font-family:var(--font-mono);font-size:11px">${esc((db?.columns||[]).join("\n"))}</textarea>
+     <label>見どころ・メモ（任意）</label>
+     <input id="cNote" value="${esc(db?.description||"")}" placeholder="例: 親子関係・改名偽装・コマンドライン">
+     <label>対応資格（スペース区切り・任意）</label>
+     <input id="cCerts" value="${esc((db?.certs||[]).join(" "))}" placeholder="OSDA">`;
+}
+
+function dAddColumnSet() {
+  openModal("Kibana 列セットを追加", dColSetForm(null),
+    () => {
+      const name = val("cName") || "無題の列セット";
+      const baseQuery = val("cQuery");
+      const columns = dashParseCols(val("cCols"));
+      const note = val("cNote");
+      const content = colSetContent(name, baseQuery, columns, note);
+      data.dashboards.push({
+        id: uid(), name, platform: "kibana", kind: "columnset",
+        format: "cols", description: note,
+        certs: val("cCerts").split(/\s+/).filter(Boolean),
+        baseQuery, columns, content, size: content.length,
+        meta: { columns: columns.length }, ts: Date.now(),
+      });
+      dashKindFilter = "columnset";
+      renderDashboards();
+      toast("✅ 列セットを追加しました");
+    },
+    { okText: "保存" });
+}
+
+function dEditColumnSet(id) {
+  const db = data.dashboards.find(x=>x.id===id); if(!db) return;
+  openModal("列セットを編集", dColSetForm(db),
+    () => {
+      db.name = val("cName") || "無題の列セット";
+      db.baseQuery = val("cQuery");
+      db.columns = dashParseCols(val("cCols"));
+      db.description = val("cNote");
+      db.certs = val("cCerts").split(/\s+/).filter(Boolean);
+      db.content = colSetContent(db.name, db.baseQuery, db.columns, db.description);
+      db.size = db.content.length;
+      db.meta = { columns: db.columns.length };
+      renderDashboards(); toast("✅ 更新しました");
+    },
+    { extraBtns: [{ label:"削除", cls:"btn-text btn-danger", fn:()=>{ closeModal(); dDelete(id); } }] });
+}
 
 /* ═══════════════════════════════════════════════════
    追加（ファイル選択 or 貼り付け）
@@ -145,6 +264,7 @@ function dAddDashboard() {
         id: uid(),
         name: val("dName") || "無名ダッシュボード",
         platform,
+        kind: "file",
         format: window.__dLoadedExt || pm.ext,
         description: val("dDesc"),
         certs: val("dCerts").split(/\s+/).filter(Boolean),
@@ -154,6 +274,7 @@ function dAddDashboard() {
         ts: Date.now(),
       });
       window.__dLoadedExt = null;
+      dashKindFilter = "file";
       renderDashboards();
       toast("✅ ダッシュボードを追加しました");
     },
@@ -171,10 +292,8 @@ function dLoadFile() {
     const content = e.target.result;
     const ta = document.getElementById("dContent");
     if (ta) ta.value = content;
-    // 名前が空ならファイル名から補完
     const nameEl = document.getElementById("dName");
     if (nameEl && !nameEl.value) nameEl.value = file.name.replace(/\.[^.]+$/,"");
-    // 拡張子を記録
     const ext = (file.name.match(/\.([^.]+)$/)||[])[1] || "";
     window.__dLoadedExt = ext.toLowerCase();
     if (info) info.innerHTML = `<span class="material-symbols-rounded" style="font-size:14px;color:var(--md-success)">check_circle</span> ${esc(file.name)} (${dashFmtSize(content.length)}) 読み込み完了`;
@@ -185,7 +304,7 @@ function dLoadFile() {
 function dSyncExt(){ /* プラットフォーム変更時のフック（今は何もしない） */ }
 
 /* ═══════════════════════════════════════════════════
-   ダウンロード
+   ダウンロード（定義ファイルのみ）
 ════════════════════════════════════════════════════ */
 function dDownload(id) {
   const db = data.dashboards.find(x=>x.id===id); if (!db) return;
@@ -202,13 +321,13 @@ function dDownload(id) {
 }
 
 /* ═══════════════════════════════════════════════════
-   プレビュー（統計＋冒頭。全文は重いので出さない）
+   プレビュー（定義ファイル：統計＋冒頭）
 ════════════════════════════════════════════════════ */
 function dPreview(id) {
   const db = data.dashboards.find(x=>x.id===id); if (!db) return;
+  if (db.kind === "columnset") return dPreviewColSet(db);
   const pm = dashPlatMeta(db.platform);
 
-  // Kibanaならダッシュボード名一覧を抽出
   let titleList = "";
   if (db.platform === "kibana") {
     const titles = [];
@@ -223,7 +342,7 @@ function dPreview(id) {
   }
 
   const metaRows = db.meta ? Object.keys(db.meta).map(k=>{
-    const labels={dashboards:"ダッシュボード",searches:"検索",visualizations:"可視化",indexPatterns:"index-pattern",panels:"パネル"};
+    const labels={dashboards:"ダッシュボード",searches:"検索",visualizations:"可視化",indexPatterns:"index-pattern",panels:"パネル",columns:"列"};
     return `<div class="th-kv"><span class="k">${labels[k]||k}</span><span class="v">${db.meta[k]}</span></div>`;
   }).join("") : "";
 
@@ -245,11 +364,32 @@ function dPreview(id) {
       extraBtns: [{ label: "閉じる", cls: "btn-text", fn: () => closeModal() }] });
 }
 
+/* プレビュー（列セット） */
+function dPreviewColSet(db) {
+  const cols = (db.columns||[]).map((c,i)=>`<div class="dash-title-item"><b style="color:var(--md-primary);margin-right:6px">${i+1}</b>${esc(c)}</div>`).join("");
+  openModal(db.name,
+    `<div class="th-detail">
+       <div class="th-detail-row"><span class="th-dl">種別</span><span class="colset-badge">Kibana 列セット</span></div>
+       ${db.description?`<div class="th-detail-row"><span class="th-dl">見どころ</span><span>${esc(db.description)}</span></div>`:""}
+       <label style="margin-top:12px">ベースクエリ（KQL）</label>
+       <pre class="th-qcode-full">${esc(db.baseQuery)||"—"}</pre>
+       <label style="margin-top:12px">列セット（${(db.columns||[]).length}・この順で追加）</label>
+       <div class="dash-title-list">${cols||"—"}</div>
+     </div>`,
+    null,
+    { okText: "列をコピー", onOk: () => { copyToClipboard((db.columns||[]).join(", ")); toast("📋 列セットをコピーしました"); },
+      extraBtns: [
+        { label: "クエリをコピー", cls: "btn-text", fn: () => { copyToClipboard(db.baseQuery||""); toast("📋 コピーしました"); } },
+        { label: "編集", cls: "btn-text", fn: () => { closeModal(); dEditColumnSet(db.id); } },
+      ] });
+}
+
 /* ═══════════════════════════════════════════════════
    編集・削除
 ════════════════════════════════════════════════════ */
 function dEdit(id) {
   const db = data.dashboards.find(x=>x.id===id); if (!db) return;
+  if (db.kind === "columnset") return dEditColumnSet(id);
   const platOpts = Object.keys(DASH_PLATFORMS).map(k=>`<option value="${k}" ${db.platform===k?'selected':''}>${DASH_PLATFORMS[k].label}</option>`).join("");
   openModal("ダッシュボードを編集",
     `<label>プラットフォーム</label><select id="dPlat">${platOpts}</select>
@@ -294,6 +434,8 @@ function renderDashboardsSearch() {
     (db.name||"").toLowerCase().includes(q) ||
     (db.description||"").toLowerCase().includes(q) ||
     (db.platform||"").toLowerCase().includes(q) ||
+    (db.baseQuery||"").toLowerCase().includes(q) ||
+    (db.columns||[]).some(c=>c.toLowerCase().includes(q)) ||
     (db.certs||[]).some(c=>c.toLowerCase().includes(q)));
   renderDashNav();
   main.innerHTML = `

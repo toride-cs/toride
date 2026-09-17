@@ -909,6 +909,7 @@ body.edit #editBanner { display: flex; }
 /* language badges */
 .th-lang { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .5px; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; }
 .th-lang-kql   { background: rgba(90,169,224,.15); color: #5aa9e0; }
+.th-lang-oql   { background: rgba(159,122,234,.16); color: #9f7aea; }
 .th-lang-esql  { background: rgba(69,200,176,.15); color: #45c8b0; }
 .th-lang-spl   { background: rgba(224,169,68,.15); color: #e0a944; }
 .th-lang-sigma { background: rgba(63,208,127,.15); color: #3fd07f; }
@@ -1316,6 +1317,13 @@ body.edit #editBanner { display: flex; }
 .dash-meta-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .dash-meta-chip { font-family: var(--font-mono); font-size: 10px; color: var(--md-primary); background: var(--md-secondary-container); border-radius: 4px; padding: 2px 7px; }
 .dash-card-foot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--md-outline-var); }
+/* ── Kibana 列セット（columnset）カード ── */
+.dash-card.colset { border-left: 3px solid #00bfb3; }
+.colset-badge { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .4px; padding: 2px 9px; border-radius: 4px; background: rgba(0,191,179,.15); color: #00bfb3; }
+.colset-q { font-family: var(--font-mono); font-size: 11px; color: var(--md-on-surface-var); background: var(--md-surface-2, var(--md-surface-dim)); border: 1px solid var(--md-outline-var); border-radius: 6px; padding: 6px 9px; word-break: break-all; line-height: 1.5; }
+.colset-cols { display: flex; flex-wrap: wrap; gap: 5px; }
+.colset-col { font-family: var(--font-mono); font-size: 10px; color: var(--md-on-surface); background: var(--md-secondary-container); border-radius: 4px; padding: 2px 7px; white-space: nowrap; }
+.colset-col b { color: var(--md-primary); font-weight: 700; margin-right: 3px; }
 .dash-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 .dash-preview-btn, .dash-edit-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: 11px; color: var(--md-on-surface-var); border: 1px solid var(--md-outline-var); border-radius: 6px; padding: 5px 9px; background: var(--md-surface); }
 .dash-preview-btn:hover, .dash-edit-btn:hover { color: var(--md-primary); border-color: var(--md-primary); }

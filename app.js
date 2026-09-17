@@ -119,7 +119,7 @@ const HUNT_STAGES = [
   { id: "execute", label: "Execute", jp: "実行" },
   { id: "act",     label: "Act",     jp: "対応" },
 ];
-const QUERY_LANGS = ["KQL", "ES|QL", "SPL", "Sigma", "YARA", "VQL"];
+const QUERY_LANGS = ["KQL", "OQL", "ES|QL", "SPL", "Sigma", "YARA", "VQL"];
 const HUNT_VERDICTS = [
   { id: "malicious",    label: "malicious",    color: "#e05c5c" },
   { id: "suspicious",   label: "suspicious",   color: "#e0a944" },
@@ -562,6 +562,12 @@ function normalizeData() {
     db.content = db.content || "";
     db.size = db.size || (db.content ? db.content.length : 0);
     db.meta = db.meta || null;               // { dashboards, searches, ... }
+    db.kind = db.kind || "file";             // "file"(定義ファイル) | "columnset"(Kibana列セット)
+    if (db.kind === "columnset") {
+      db.baseQuery = db.baseQuery || "";
+      db.columns = Array.isArray(db.columns) ? db.columns : [];
+      db.format = db.format || "cols";
+    }
     db.ts = db.ts || Date.now();
   });
 
